@@ -21,6 +21,10 @@ label { margin: 0.8rem 0; }
 input { padding: 0.75rem; border: 1px solid #b8cbc5; border-radius: 8px; }
 button { padding: 0.7rem 1rem; color: white; background: #1d755e; border: 0; border-radius: 8px; cursor: pointer; }
 button:disabled { opacity: 0.45; }
+.actions { display: flex; gap: 0.5rem; }
+.danger { background: #9b2f2f; }
+.success { color: #176b43; }
+progress { width: 100%; }
 .row, .track, .pager { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .track { padding: 0.8rem 0; border-bottom: 1px solid #e1ebe7; }
 .track small { display: block; color: #61756f; }

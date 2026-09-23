@@ -8,9 +8,15 @@
   <div class="grid">
     <article class="card">
       <h2>Importer</h2>
-      <label>Titre<input [formControl]="title" /></label>
-      <label>Fichier audio<input type="file" accept="audio/*" (change)="choose($event)" /></label>
-      <button type="button" (click)="upload()" [disabled]="!file">Envoyer</button>
+      <label>Titre<input [formControl]="title" [disabled]="uploading()" /></label>
+      <label>Fichier audio<input type="file" accept=".mp3,.wav,.ogg,.m4a,audio/*" (change)="choose($event)" [disabled]="uploading()" /></label>
+      <button type="button" (click)="upload()" [disabled]="!file || uploading()">
+        {{ uploading() ? 'Envoi…' : 'Envoyer' }}
+      </button>
+      @if (uploading()) {
+        <p role="status">Progression : {{ uploadProgress() }} %</p>
+        <progress [value]="uploadProgress()" max="100">{{ uploadProgress() }} %</progress>
+      }
     </article>
 
     <article class="card">
@@ -18,6 +24,12 @@
         <h2>Mes pistes</h2>
         <button type="button" (click)="load()">Actualiser</button>
       </div>
+      @if (error()) {
+        <p class="error" role="alert">{{ error() }}</p>
+      }
+      @if (success()) {
+        <p class="success" role="status">{{ success() }}</p>
+      }
       @if (loading()) {
         <p>Chargement…</p>
       }
@@ -25,9 +37,14 @@
         <div class="track">
           <div>
             <b>{{ track.title }}</b>
-            <small>{{ track.originalName }} · {{ track.size }} Ko</small>
+            <small>{{ track.originalName }} · {{ formatSize(track.size) }} · {{ track.createdAt.slice(0, 10) }}</small>
           </div>
-          <button type="button" (click)="play(track)" [attr.aria-label]="'Lire ' + track.title">▶</button>
+          <div class="actions">
+            <button type="button" (click)="play(track)" [attr.aria-label]="'Lire ' + track.title">▶</button>
+            <button type="button" class="danger" (click)="remove(track)" [disabled]="deletingId() === track.id">
+              {{ deletingId() === track.id ? 'Suppression…' : 'Supprimer' }}
+            </button>
+          </div>
         </div>
       } @empty {
         <p>Aucune piste.</p>
@@ -38,6 +55,7 @@
         <button type="button" (click)="go(page() + 1)" [disabled]="page() === pages()">Suiv.</button>
       </div>
       @if (audioUrl()) {
+        <p>Lecture en cours : <b>{{ playingTitle() }}</b></p>
         <audio [src]="audioUrl()" controls autoplay></audio>
       }
     </article>
