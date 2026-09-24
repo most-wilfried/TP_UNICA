@@ -10,7 +10,7 @@
       <h2>Importer</h2>
       <label>Titre<input [formControl]="title" [disabled]="uploading()" /></label>
       <label>Fichier audio<input type="file" accept=".mp3,.wav,.ogg,.m4a,audio/*" (change)="choose($event)" [disabled]="uploading()" /></label>
-      <button type="button" (click)="upload()" [disabled]="!file || uploading()">
+      <button class="primary wide" type="button" (click)="upload()" [disabled]="!file || uploading()">
         {{ uploading() ? 'Envoi…' : 'Envoyer' }}
       </button>
       @if (uploading()) {
@@ -22,7 +22,7 @@
     <article class="card">
       <div class="row">
         <h2>Mes pistes</h2>
-        <button type="button" (click)="load()">Actualiser</button>
+        <button class="secondary" type="button" (click)="load()">↻ Actualiser</button>
       </div>
       @if (error()) {
         <p class="error" role="alert">{{ error() }}</p>
@@ -40,7 +40,7 @@
             <small>{{ track.originalName }} · {{ formatSize(track.size) }} · {{ track.createdAt.slice(0, 10) }}</small>
           </div>
           <div class="actions">
-            <button type="button" (click)="play(track)" [attr.aria-label]="'Lire ' + track.title">▶</button>
+            <button class="icon-button" type="button" (click)="play(track)" [attr.aria-label]="'Lire ' + track.title">▶</button>
             <button type="button" class="danger" (click)="remove(track)" [disabled]="deletingId() === track.id">
               {{ deletingId() === track.id ? 'Suppression…' : 'Supprimer' }}
             </button>

@@ -75,3 +75,122 @@ L'ajout initial des specs les faisait entrer dans le build applicatif, car `tsco
 ### Ce que le binôme doit pouvoir expliquer
 
 Le trajet composant → service → `HttpClient` → API; la différence entre Signal et `localStorage`; le rôle du guard et celui, distinct, de la sécurité backend; l'ajout du JWT par l'intercepteur; la gestion d'un `401`; la validation frontend qui complète sans remplacer Multer; la différence entre événements de progression et réponse finale; le passage Blob → ObjectURL → lecteur audio; la nécessité de révoquer l'URL; la pagination serveur; la suppression via le service; et l'intérêt de tests HTTP simulés indépendants de MongoDB.
+
+## Mission 1 - Finalisation des livrables TP1 (24 septembre 2026)
+
+### Objectif et demande reformulée
+
+Vérifier que tous les livrables de la Mission 1 sont présents et fournir des
+preuves exploitables pour le contrôle continu : code frontend complété, schéma
+annoté de la connexion, preuve d'échanges HTTP, explication de Signal et
+`localStorage`, résultats des tests et mise à jour du présent rapport.
+
+### Plan suivi
+
+1. Relancer les tests frontend et backend ainsi que le build Angular.
+2. Démarrer le backend avec MongoDB Atlas et le frontend Angular.
+3. Exécuter les trois scénarios du checkpoint sans enregistrer de secret.
+4. Créer une preuve anonymisée et une synthèse autonome des livrables.
+5. Relier les preuves depuis le rapport.
+
+### Résultats et preuves
+
+- Le backend s'est connecté à MongoDB Atlas et a confirmé que le compte de
+  démonstration existait.
+- Connexion réussie : `POST /api/auth/login`, statut `200`, sans header
+  `Authorization`.
+- Connexion refusée : `POST /api/auth/login`, statut `401`, sans header
+  `Authorization`.
+- Lecture du profil : `GET /api/users/me`, statut `200`, avec un header Bearer
+  dont la valeur a été masquée.
+- Tests frontend : **4/4 réussis**.
+- Tests backend : **2/2 réussis**.
+- Build Angular : **réussi**.
+
+Preuves liées :
+
+- [Synthèse des livrables TP1](LIVRABLES_TP1.md)
+- [Preuve HTTP réelle et anonymisée](preuves/tp1-reseau-authentification.png)
+- [Guide détaillé TP1 au format PDF](output/pdf/guide_verification_tp1_authentification_profil.pdf)
+
+La preuve PNG correspond à de véritables requêtes exécutées contre l'API et
+MongoDB Atlas. Ce n'est pas une capture de l'onglet DevTools, car aucun
+navigateur pilotable n'était disponible dans l'environnement de l'assistant.
+Cette limite est explicitement indiquée afin de ne pas présenter une preuve
+artificielle comme une capture Network.
+
+### Fichiers créés ou modifiés
+
+- `LIVRABLES_TP1.md` : schéma, explications et bilan de conformité ;
+- `preuves/tp1-reseau-authentification.png` : preuve HTTP anonymisée ;
+- `RAPPORT_IA_MODELE.md` : présente entrée de mission.
+
+Le code applicatif n'a pas été modifié pendant cette finalisation : il était
+déjà conforme aux exigences du TP1 après la mission précédente.
+
+### Ce que le binôme doit savoir expliquer
+
+Le binôme doit pouvoir expliquer le flux complet de connexion, le rôle de
+`AuthService`, la différence entre guard, intercepteur et middleware backend,
+le stockage et la validation du JWT, la réaction à un `401`, la mise à jour du
+profil, ainsi que la différence entre un Signal réactif et `localStorage`.
+
+## Amélioration visuelle, thèmes et responsive (24 septembre 2026)
+
+### Demande reformulée
+
+Moderniser l'interface du frontend sans modifier ses fonctionnalités métier :
+rendre le style plus attractif, améliorer l'apparence et les états des boutons,
+ajouter un mode clair et un mode sombre, puis assurer une utilisation confortable
+sur ordinateur, tablette et téléphone.
+
+### Modifications réalisées
+
+- Mise en place d'une identité visuelle cohérente avec variables CSS : surfaces,
+  couleurs, bordures, ombres et contrastes adaptés aux deux thèmes.
+- Ajout d'un sélecteur clair/sombre accessible dans l'en-tête.
+- Initialisation avec la préférence système et mémorisation du choix dans
+  `localStorage` sous la clé `gpc_theme`.
+- Refonte de l'en-tête : marque musicale, navigation active, actions regroupées
+  et navigation adaptée aux petits écrans.
+- Amélioration des boutons : variantes principale, secondaire, danger et icône,
+  avec états hover, focus, actif et désactivé.
+- Amélioration des cartes, champs, messages, listes de pistes, pagination,
+  lecteur audio et barre de progression.
+- Ajout de textes d'introduction sur les pages de connexion, inscription et
+  profil.
+- Mise en page responsive avec points de rupture à 760 px, 520 px et 460 px.
+- Respect de `prefers-reduced-motion` pour les personnes qui limitent les
+  animations.
+- Ajout d'un pied de page sobre et responsive.
+
+### Fichiers modifiés
+
+- `frontend-starter/src/styles.css`
+- `frontend-starter/src/app/components/app/app.ts`
+- `frontend-starter/src/app/components/app/app.html`
+- `frontend-starter/src/app/components/app/app.css`
+- `frontend-starter/src/app/components/login-page/login-page.html`
+- `frontend-starter/src/app/components/login-page/login-page.css`
+- `frontend-starter/src/app/components/register-page/register-page.html`
+- `frontend-starter/src/app/components/register-page/register-page.css`
+- `frontend-starter/src/app/components/profile-page/profile-page.html`
+- `frontend-starter/src/app/components/profile-page/profile-page.css`
+- `frontend-starter/src/app/components/tracks-page/tracks-page.html`
+
+### Vérifications et preuves
+
+- `npm test` dans `frontend-starter/` : **4 tests réussis sur 4**.
+- `npm run build` dans `frontend-starter/` : **réussi**.
+- Bundle initial : environ **318,56 kB brut**, dont **5,41 kB** de styles.
+- La compilation stricte des templates Angular ne signale aucune erreur.
+- Aucun navigateur pilotable n'étant disponible dans l'environnement de
+  l'assistant, la vérification visuelle finale sur plusieurs largeurs doit être
+  reproduite par le binôme dans les outils responsifs du navigateur.
+
+### Ce que le binôme doit savoir expliquer
+
+Le binôme doit pouvoir expliquer le rôle des variables CSS dans les deux thèmes,
+la propriété `data-theme` portée par l'élément HTML, la persistance du choix dans
+`localStorage`, l'utilisation de `matchMedia` pour la préférence système, le rôle
+des media queries et l'importance des états de focus visibles pour l'accessibilité.

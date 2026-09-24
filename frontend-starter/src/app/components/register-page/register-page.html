@@ -1,5 +1,7 @@
 <section class="card">
+  <p class="eyebrow">REJOINDRE LE STUDIO</p>
   <h1>Créer un compte</h1>
+  <p class="lead">Centralisez vos pistes et entraînez-vous où vous voulez.</p>
   <form [formGroup]="form" (ngSubmit)="submit()">
     <label>Nom<input formControlName="name" autocomplete="name" /></label>
     @if (form.controls.name.touched && form.controls.name.invalid) {
@@ -13,12 +15,12 @@
     @if (form.controls.password.touched && form.controls.password.invalid) {
       <p class="error">Le mot de passe doit contenir au moins 8 caractères.</p>
     }
-    <button type="submit" [disabled]="form.invalid || submitting()">
+    <button class="primary wide" type="submit" [disabled]="form.invalid || submitting()">
       {{ submitting() ? 'Création…' : 'Créer mon compte' }}
     </button>
   </form>
   @if (error()) {
     <p class="error">{{ error() }}</p>
   }
-  <p><a routerLink="/login">Déjà inscrit ?</a></p>
+  <p class="form-link">Déjà inscrit ? <a routerLink="/login">Se connecter</a></p>
 </section>

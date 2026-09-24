@@ -1,20 +1,40 @@
 <header>
-  <div>
-    <b>Guitar Practice Cloud</b>
-    <small>Le cloud qui manque à votre ampli</small>
+  <a class="brand" routerLink="/tracks" aria-label="Accueil Guitar Practice Cloud">
+    <span class="brand-mark" aria-hidden="true">♪</span>
+    <span>
+      <b>Guitar Practice Cloud</b>
+      <small>Le cloud qui manque à votre ampli</small>
+    </span>
+  </a>
+  <div class="header-actions">
+    <nav aria-label="Navigation principale">
+      @if (auth.token()) {
+        <a routerLink="/tracks" routerLinkActive="active">Pistes</a>
+        <a routerLink="/profile" routerLinkActive="active">Profil</a>
+        <button type="button" class="nav-button" (click)="logout()">Déconnexion</button>
+      } @else {
+        <a routerLink="/login" routerLinkActive="active">Connexion</a>
+        <a routerLink="/register" routerLinkActive="active">Inscription</a>
+      }
+    </nav>
+    <button
+      type="button"
+      class="theme-toggle"
+      (click)="toggleTheme()"
+      [attr.aria-pressed]="darkMode()"
+      [attr.aria-label]="darkMode() ? 'Activer le mode clair' : 'Activer le mode sombre'"
+      [title]="darkMode() ? 'Mode clair' : 'Mode sombre'"
+    >
+      <span aria-hidden="true">{{ darkMode() ? '☀' : '☾' }}</span>
+    </button>
   </div>
-  <nav aria-label="Navigation principale">
-    @if (auth.token()) {
-      <a routerLink="/tracks">Backing tracks</a>
-      <a routerLink="/profile">Profil</a>
-      <button type="button" class="link-button" (click)="logout()">Déconnexion</button>
-    } @else {
-      <a routerLink="/login">Connexion</a>
-      <a routerLink="/register">Inscription</a>
-    }
-  </nav>
 </header>
 
 <main>
   <router-outlet />
 </main>
+
+<footer>
+  <span>Guitar Practice Cloud</span>
+  <small>Travaillez vos morceaux, partout.</small>
+</footer>
