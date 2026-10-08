@@ -8,6 +8,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { User } from "./models/User.js";
 import { Track } from "./models/Track.js";
+import { MixProject } from "./models/MixProject.js";
 
 // Les fichiers audio restent sur le disque du serveur dans ce TP.
 // MongoDB ne conserve que leurs métadonnées : titre, nom, taille, etc.
@@ -434,6 +435,72 @@ export function createApp() {
       res.status(204).end();
     } catch (error) {
       console.error("[tracks] Erreur de suppression", error);
+      next(error);
+    }
+  });
+
+  /** Projets de mixage persistés dans MongoDB et accessibles au propriétaire ou aux invités. */
+  app.get("/api/projects", auth, async (req, res, next) => {
+    try {
+      const projects = await MixProject.find({
+        $or: [{ ownerId: req.auth.sub }, { sharedWith: req.auth.sub }],
+      }).sort({ updatedAt: -1 });
+      res.json(projects.map((project) => project.toPublic()));
+    } catch (error) {
+      console.error("[projects] Lecture impossible", error);
+      next(error);
+    }
+  });
+
+  app.post("/api/projects", auth, async (req, res, next) => {
+    try {
+      const project = await MixProject.create({ ...req.body, ownerId: req.auth.sub });
+      res.status(201).json(project.toPublic());
+    } catch (error) {
+      console.error("[projects] Création impossible", error);
+      next(error);
+    }
+  });
+
+  app.put("/api/projects/:id", auth, async (req, res, next) => {
+    try {
+      const current = await MixProject.findOne({ _id: req.params.id, ownerId: req.auth.sub });
+      if (!current) return res.status(404).json({ message: "Projet inconnu" });
+      current.versions.push({ number: current.versions.length + 1, settings: current.settings });
+      const allowed = ["name", "trackId", "artist", "genre", "tags", "coverImageUrl", "settings"];
+      for (const field of allowed) if (req.body?.[field] !== undefined) current[field] = req.body[field];
+      await current.save();
+      res.json(current.toPublic());
+    } catch (error) {
+      console.error("[projects] Mise à jour impossible", error);
+      next(error);
+    }
+  });
+
+  app.delete("/api/projects/:id", auth, async (req, res, next) => {
+    try {
+      const project = await MixProject.findOneAndDelete({ _id: req.params.id, ownerId: req.auth.sub });
+      if (!project) return res.status(404).json({ message: "Projet inconnu" });
+      res.status(204).end();
+    } catch (error) {
+      console.error("[projects] Suppression impossible", error);
+      next(error);
+    }
+  });
+
+  app.post("/api/projects/:id/share", auth, async (req, res, next) => {
+    try {
+      const user = await User.findOne({ email: String(req.body?.email || "").toLowerCase() });
+      if (!user) return res.status(404).json({ message: "Utilisateur inconnu" });
+      const project = await MixProject.findOneAndUpdate(
+        { _id: req.params.id, ownerId: req.auth.sub },
+        { $addToSet: { sharedWith: user.id } },
+        { new: true },
+      );
+      if (!project) return res.status(404).json({ message: "Projet inconnu" });
+      res.json(project.toPublic());
+    } catch (error) {
+      console.error("[projects] Partage impossible", error);
       next(error);
     }
   });

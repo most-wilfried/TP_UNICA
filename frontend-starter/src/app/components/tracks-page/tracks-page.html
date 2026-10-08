@@ -1,4 +1,4 @@
-<section>
+<section [class]="'tracks-view view-' + section()">
   <div class="hero">
     <p class="eyebrow">MA BIBLIOTHÈQUE</p>
     <h1>Backing tracks</h1>
@@ -6,20 +6,26 @@
   </div>
 
   <div class="grid">
-    <article class="card">
+    <article class="card library-only">
       <h2>Importer</h2>
       <label>Titre<input [formControl]="title" [disabled]="uploading()" /></label>
-      <label>Fichier audio<input type="file" accept=".mp3,.wav,.ogg,.m4a,audio/*" (change)="choose($event)" [disabled]="uploading()" /></label>
-      <button class="primary wide" type="button" (click)="upload()" [disabled]="!file || uploading()">
+      <label>Fichier audio<input #fileInput type="file" accept=".mp3,.wav,.ogg,.m4a,audio/*" (change)="choose($event)" [disabled]="uploading()" /></label>
+      <button class="primary wide" type="button" (click)="upload()" [disabled]="!file || uploading()" [attr.aria-busy]="uploading()">
         {{ uploading() ? 'Envoi…' : 'Envoyer' }}
       </button>
       @if (uploading()) {
         <p role="status">Progression : {{ uploadProgress() }} %</p>
         <progress [value]="uploadProgress()" max="100">{{ uploadProgress() }} %</progress>
       }
+      @if (uploadError()) {
+        <p class="error upload-message" role="alert">{{ uploadError() }}</p>
+      }
+      @if (uploadSuccess()) {
+        <p class="success upload-message" role="status">{{ uploadSuccess() }}</p>
+      }
     </article>
 
-    <article class="card">
+    <article class="card library-card">
       <div class="row">
         <h2>Mes pistes</h2>
         <button class="secondary" type="button" (click)="load()">↻ Actualiser</button>
@@ -33,21 +39,39 @@
       @if (loading()) {
         <p>Chargement…</p>
       }
-      @for (track of tracks(); track track.id) {
+      <div class="search-row">
+        <label class="search-label" for="track-search">
+          Rechercher un titre sur cette page
+          <input id="track-search" type="search" placeholder="Ex. Blues en la" [value]="searchQuery()" (input)="search($event)" />
+        </label>
+        @if (searchQuery()) {
+          <button class="secondary clear-search" type="button" (click)="clearSearch()">Effacer</button>
+        }
+      </div>
+      <label class="sort-label" for="track-sort">
+        Trier les pistes sur cette page
+        <select id="track-sort" [value]="sortOrder()" (change)="changeSort($event)">
+          @for (option of sortOptions; track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </label>
+      @for (track of filteredTracks(); track track.id) {
         <div class="track">
           <div>
             <b>{{ track.title }}</b>
             <small>{{ track.originalName }} · {{ formatSize(track.size) }} · {{ track.createdAt.slice(0, 10) }}</small>
           </div>
           <div class="actions">
-            <button class="icon-button" type="button" (click)="play(track)" [attr.aria-label]="'Lire ' + track.title">▶</button>
-            <button type="button" class="danger" (click)="remove(track)" [disabled]="deletingId() === track.id">
+            <button class="icon-button" type="button" (click)="openWorkspace(track, 'player')" [attr.aria-label]="'Ouvrir le lecteur pour ' + track.title">▶</button>
+            <button class="secondary" type="button" (click)="openWorkspace(track, 'studio')">Studio</button>
+            <button type="button" class="danger" (click)="remove(track)" [disabled]="deletingId() !== null">
               {{ deletingId() === track.id ? 'Suppression…' : 'Supprimer' }}
             </button>
           </div>
         </div>
       } @empty {
-        <p>Aucune piste.</p>
+        <p>{{ searchQuery() ? 'Aucune piste ne correspond à cette recherche sur la page.' : 'Aucune piste.' }}</p>
       }
       <div class="pager">
         <button type="button" (click)="go(page() - 1)" [disabled]="page() === 1">Préc.</button>
@@ -55,9 +79,149 @@
         <button type="button" (click)="go(page() + 1)" [disabled]="page() === pages()">Suiv.</button>
       </div>
       @if (audioUrl()) {
-        <p>Lecture en cours : <b>{{ playingTitle() }}</b></p>
-        <audio [src]="audioUrl()" controls autoplay></audio>
+        <section class="audio-workstation workspace-only" aria-label="Lecteur audio">
+          <p>Lecture en cours : <b>{{ playingTitle() }}</b></p>
+          <div class="visualizer-heading">
+            <span>Visualiseur en temps réel</span>
+            <label>Modèle
+              <select [value]="visualizerMode()" (change)="changeVisualizerMode($event)">
+                <option value="bars">Barres énergie</option>
+                <option value="mirror">Miroir symétrique</option>
+                <option value="wave">Onde fluide</option>
+                <option value="circle">Cercle radial</option>
+              </select>
+            </label>
+          </div>
+          <canvas #waveform class="waveform" (click)="seekFromWaveform($event)" aria-label="Visualiseur audio cliquable en temps réel"></canvas>
+          @if (waveformError()) {
+            <p class="error">{{ waveformError() }}</p>
+          }
+          <audio #audioPlayer [src]="audioUrl()" autoplay
+            (loadedmetadata)="onLoadedMetadata()" (timeupdate)="onTimeUpdate()"
+            (play)="onPlay()" (pause)="onPause()"></audio>
+
+          <div class="transport-controls">
+            <button type="button" class="primary" (click)="togglePlayback()">
+              {{ isPlaying() ? '❚❚ Pause' : '▶ Lecture' }}
+            </button>
+            <button type="button" class="secondary" (click)="stopPlayback()">■ Stop</button>
+            <button type="button" class="secondary" (click)="toggleLoop()" [attr.aria-pressed]="loopEnabled()">
+              {{ loopEnabled() ? 'Boucle activée' : 'Boucle désactivée' }}
+            </button>
+          </div>
+
+          <div class="timeline-control">
+            <span>{{ formatTime(currentTime()) }}</span>
+            <input type="range" min="0" [max]="duration()" step="0.01" [value]="currentTime()" (input)="seek($event)" aria-label="Position de lecture" />
+            <span>{{ formatTime(duration()) }}</span>
+          </div>
+
+          <div class="mixer-controls">
+            <label>Volume
+              <input type="range" min="0" max="1" step="0.01" [value]="volume()" (input)="changeVolume($event)" />
+            </label>
+            <button type="button" class="secondary" (click)="toggleMute()" [attr.aria-pressed]="muted()">
+              {{ muted() ? 'Réactiver le son' : 'Muet' }}
+            </button>
+            <label>Vitesse
+              <select [value]="playbackRate()" (change)="changePlaybackRate($event)">
+                <option value="0.5">0,5×</option>
+                <option value="0.75">0,75×</option>
+                <option value="1">1×</option>
+                <option value="1.25">1,25×</option>
+                <option value="1.5">1,5×</option>
+                <option value="2">2×</option>
+              </select>
+            </label>
+          </div>
+
+          <fieldset class="region-controls">
+            <legend>Zone de travail</legend>
+            <label>Début : {{ formatTime(regionStart()) }}
+              <input type="range" min="0" [max]="duration()" step="0.01" [value]="regionStart()" (input)="changeRegionStart($event)" />
+            </label>
+            <label>Fin : {{ formatTime(regionEnd()) }}
+              <input type="range" min="0" [max]="duration()" step="0.01" [value]="regionEnd()" (input)="changeRegionEnd($event)" />
+            </label>
+          </fieldset>
+
+          <section class="advanced-music studio-only" aria-label="Fonctions musicales avancées">
+            <h3>Tempo et grille rythmique</h3>
+            <p class="analysis-status" role="status">{{ bpmAnalysis() }}</p>
+            <div class="advanced-grid">
+              <label>BPM
+                <input type="number" min="40" max="240" [value]="bpm()" (change)="changeBpm($event)" />
+              </label>
+              @if (detectedBpm()) {
+                <button type="button" class="secondary" (click)="useDetectedBpm()">Utiliser {{ detectedBpm() }} BPM</button>
+              }
+              <button type="button" class="secondary" (click)="toggleMetronome()" [attr.aria-pressed]="metronomeEnabled()">
+                {{ metronomeEnabled() ? 'Arrêter le métronome' : 'Démarrer le métronome' }}
+              </button>
+              <button type="button" class="secondary" (click)="toggleBeatGrid()" [attr.aria-pressed]="beatGridEnabled()">
+                {{ beatGridEnabled() ? 'Masquer la grille' : 'Afficher la grille' }}
+              </button>
+              <button type="button" class="secondary" (click)="snapToBeat()">Caler sur le battement</button>
+            </div>
+
+            <h3>Boucle musicale</h3>
+            <div class="advanced-grid">
+              <label>Mesure
+                <select [value]="beatsPerMeasure()" (change)="changeBeatsPerMeasure($event)">
+                  <option value="3">3 temps</option>
+                  <option value="4">4 temps</option>
+                  <option value="6">6 temps</option>
+                </select>
+              </label>
+              <label>Longueur
+                <select [value]="loopMeasures()" (change)="changeLoopMeasures($event)">
+                  <option value="1">1 mesure</option>
+                  <option value="2">2 mesures</option>
+                  <option value="4">4 mesures</option>
+                  <option value="8">8 mesures</option>
+                </select>
+              </label>
+              <button type="button" class="secondary" (click)="createMeasureLoop()">Créer la boucle calée</button>
+            </div>
+
+            <h3>Repères</h3>
+            <div class="marker-form">
+              <input type="text" placeholder="Nom du repère" [value]="markerLabel()" (input)="updateMarkerLabel($event)" />
+              <button type="button" class="secondary" (click)="addMarker()">Ajouter à {{ formatTime(currentTime()) }}</button>
+            </div>
+            @if (markers().length) {
+              <div class="marker-list">
+                @for (marker of markers(); track marker.id) {
+                  <div class="marker-chip">
+                    <button type="button" class="secondary" (click)="goToMarker(marker.time)">{{ marker.label }} · {{ formatTime(marker.time) }}</button>
+                    <button type="button" class="danger compact" (click)="removeMarker(marker.id)" [attr.aria-label]="'Supprimer le repère ' + marker.label">×</button>
+                  </div>
+                }
+              </div>
+            }
+
+            <h3>Panoramique et automation</h3>
+            <label>Panoramique : {{ pan() < 0 ? 'Gauche' : pan() > 0 ? 'Droite' : 'Centre' }}
+              <input type="range" min="-1" max="1" step="0.01" [value]="pan()" (input)="changePan($event)" />
+            </label>
+            <div class="advanced-grid">
+              <button type="button" class="secondary" (click)="addAutomationPoint()">Mémoriser volume/panoramique ici</button>
+              <button type="button" class="secondary" (click)="toggleAutomation()" [attr.aria-pressed]="automationEnabled()">
+                {{ automationEnabled() ? 'Automation active' : 'Automation inactive' }}
+              </button>
+              <button type="button" class="secondary" (click)="clearAutomation()" [disabled]="!automationPoints().length">Effacer l’automation</button>
+            </div>
+            <p class="analysis-status">{{ automationPoints().length }} point(s) d’automation.</p>
+            <p class="technical-note">La vitesse conserve la tonalité grâce au moteur du navigateur. La transposition indépendante et l’automation des effets seront ajoutées avec le moteur DSP de la priorité 3.</p>
+          </section>
+        </section>
       }
     </article>
   </div>
+  @if (section() !== 'library' && !audioUrl()) {
+    <article class="card empty-workspace">
+      <h2>{{ section() === 'player' ? 'Lecteur audio' : 'Espace de mixage' }}</h2>
+      <p>Sélectionnez d’abord une piste depuis la bibliothèque avec le bouton {{ section() === 'player' ? 'Lecture' : 'Studio' }}.</p>
+    </article>
+  }
 </section>

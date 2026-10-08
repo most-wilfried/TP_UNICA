@@ -10,6 +10,9 @@
     <nav aria-label="Navigation principale">
       @if (auth.token()) {
         <a routerLink="/tracks" routerLinkActive="active">Pistes</a>
+        <a routerLink="/player" routerLinkActive="active">Lecteur audio</a>
+        <a routerLink="/studio" routerLinkActive="active">Mixage</a>
+        <a routerLink="/projects" routerLinkActive="active">Projets</a>
         <a routerLink="/profile" routerLinkActive="active">Profil</a>
         <button type="button" class="nav-button" (click)="logout()">Déconnexion</button>
       } @else {

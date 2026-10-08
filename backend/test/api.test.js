@@ -1,11 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import mongoose from "mongoose";
+import jwt from "jsonwebtoken";
 import { createApp } from "../src/app.js";
 import { User } from "../src/models/User.js";
 import { Track } from "../src/models/Track.js";
 
 let server, base;
+const userId = new mongoose.Types.ObjectId().toString();
+const authorization = `Bearer ${jwt.sign(
+  { sub: userId, email: "test@example.com" },
+  process.env.JWT_SECRET || "tp1-development-secret",
+)}`;
 
 test.before(async () => {
   server = createApp().listen(0);
@@ -40,4 +46,119 @@ test("schémas Mongoose et relation", () => {
   
   assert.equal(t.title, "Blues");
   assert.equal(Track.schema.path("ownerId").options.ref, "User");
+});
+
+test("route protégée refusée sans JWT", async () => {
+  const response = await fetch(base + "/api/tracks");
+
+  assert.equal(response.status, 401);
+  assert.deepEqual(await response.json(), { message: "Authentification requise" });
+});
+
+test("route protégée refusée avec un JWT invalide", async () => {
+  const response = await fetch(base + "/api/tracks", {
+    headers: { Authorization: "Bearer jeton-invalide" },
+  });
+
+  assert.equal(response.status, 401);
+  assert.deepEqual(await response.json(), { message: "Jeton invalide ou expiré" });
+});
+
+test("upload refusé lorsqu'aucun fichier audio n'est fourni", async () => {
+  const body = new FormData();
+  body.append("title", "Sans fichier");
+
+  const response = await fetch(base + "/api/tracks", {
+    method: "POST",
+    headers: { Authorization: authorization },
+    body,
+  });
+
+  assert.equal(response.status, 400);
+  assert.deepEqual(await response.json(), { message: "Fichier audio requis" });
+});
+
+test("upload refusé lorsque le type MIME n'est pas audio", async () => {
+  const body = new FormData();
+  body.append("title", "Faux audio");
+  body.append("audio", new Blob(["texte"], { type: "text/plain" }), "faux.mp3");
+
+  const response = await fetch(base + "/api/tracks", {
+    method: "POST",
+    headers: { Authorization: authorization },
+    body,
+  });
+
+  assert.equal(response.status, 400);
+  assert.deepEqual(await response.json(), { message: "Format audio non accepté" });
+});
+
+test("pagination applique page et limit sans utiliser MongoDB", async () => {
+  const originalFind = Track.find;
+  const originalCountDocuments = Track.countDocuments;
+  const calls = { skip: undefined, limit: undefined, filter: undefined };
+
+  Track.find = (filter) => {
+    calls.filter = filter;
+    const query = {
+      sort: () => query,
+      skip: (value) => {
+        calls.skip = value;
+        return query;
+      },
+      limit: (value) => {
+        calls.limit = value;
+        return query;
+      },
+      select: () => query,
+      lean: async () => [],
+    };
+    return query;
+  };
+  Track.countDocuments = async (filter) => {
+    assert.equal(String(filter.ownerId), userId);
+    return 15;
+  };
+
+  try {
+    const response = await fetch(base + "/api/tracks?page=3&limit=7", {
+      headers: { Authorization: authorization },
+    });
+    const result = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(String(calls.filter.ownerId), userId);
+    assert.equal(calls.skip, 14);
+    assert.equal(calls.limit, 7);
+    assert.deepEqual(result, {
+      items: [], page: 3, limit: 7, total: 15, pages: 3,
+    });
+  } finally {
+    Track.find = originalFind;
+    Track.countDocuments = originalCountDocuments;
+  }
+});
+
+test("accès audio refusé pour une piste qui n'appartient pas à l'utilisateur", async () => {
+  const originalFindOne = Track.findOne;
+  const otherTrackId = new mongoose.Types.ObjectId().toString();
+  let receivedFilter;
+
+  Track.findOne = (filter) => {
+    receivedFilter = filter;
+    return { select: async () => null };
+  };
+
+  try {
+    const response = await fetch(base + `/api/tracks/${otherTrackId}/audio`, {
+      headers: { Authorization: authorization },
+    });
+
+    assert.equal(response.status, 404);
+    assert.equal(receivedFilter._id, otherTrackId);
+    assert.equal(String(receivedFilter.ownerId), userId);
+    assert.deepEqual(await response.json(), { message: "Piste inconnue" });
+  } finally {
+    Track.findOne = originalFindOne;
+  }
 });
