@@ -81,21 +81,40 @@
       @if (audioUrl()) {
         <section class="audio-workstation workspace-only" aria-label="Lecteur audio">
           <p>Lecture en cours : <b>{{ playingTitle() }}</b></p>
+          <section #visualizerPanel class="visualizer-panel" aria-label="Visualisation musicale">
           <div class="visualizer-heading">
             <span>Visualiseur en temps réel</span>
+            @if (section() === 'studio') {
             <label>Modèle
               <select [value]="visualizerMode()" (change)="changeVisualizerMode($event)">
+                <option value="butterchurn">Butterchurn · MilkDrop</option>
                 <option value="bars">Barres énergie</option>
                 <option value="mirror">Miroir symétrique</option>
                 <option value="wave">Onde fluide</option>
                 <option value="circle">Cercle radial</option>
               </select>
             </label>
+            }
           </div>
-          <canvas #waveform class="waveform" (click)="seekFromWaveform($event)" aria-label="Visualiseur audio cliquable en temps réel"></canvas>
+          @if (visualizerMode() === 'butterchurn') {
+            <label class="preset-picker">Preset Butterchurn
+              <select [value]="selectedPreset()" (change)="changePreset($event)" [disabled]="!presetNames().length">
+                @if (!presetNames().length) { <option value="">Lancez la lecture pour charger les presets</option> }
+                @for (name of presetNames(); track name) { <option [value]="name">{{ name }}</option> }
+              </select>
+            </label>
+          }
+          <div class="visualizer-actions">
+            <button type="button" class="secondary" (click)="nextPreset()" [disabled]="!presetNames().length || visualizerMode() !== 'butterchurn'">Preset suivant</button>
+            <button type="button" class="primary" (click)="toggleFullscreen()">{{ fullscreen() ? 'Quitter le plein écran' : 'Plein écran' }}</button>
+            <button type="button" class="secondary" (click)="togglePlayback()">{{ isPlaying() ? 'Pause' : 'Lecture' }}</button>
+          </div>
+          <canvas #butterchurnCanvas class="butterchurn-canvas" [hidden]="visualizerMode() !== 'butterchurn'" aria-label="Effets Butterchurn réactifs à la musique"></canvas>
+          <canvas #waveform [hidden]="visualizerMode() === 'butterchurn'" class="waveform" (click)="seekFromWaveform($event)" aria-label="Visualiseur audio cliquable en temps réel"></canvas>
           @if (waveformError()) {
             <p class="error">{{ waveformError() }}</p>
           }
+          </section>
           <audio #audioPlayer [src]="audioUrl()" autoplay
             (loadedmetadata)="onLoadedMetadata()" (timeupdate)="onTimeUpdate()"
             (play)="onPlay()" (pause)="onPause()"></audio>

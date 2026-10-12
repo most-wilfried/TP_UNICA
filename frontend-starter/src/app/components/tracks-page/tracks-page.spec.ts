@@ -8,6 +8,15 @@ import { Page } from '../../shared/models/page.model';
 import { TrackService } from '../../shared/services/track.service';
 import { TracksPageComponent } from './tracks-page';
 
+const engineMock = vi.hoisted(() => ({
+  createVisualizer: vi.fn(),
+  connectAudio: vi.fn(), disconnectAudio: vi.fn(), loadPreset: vi.fn(),
+  render: vi.fn(), setRendererSize: vi.fn(),
+}));
+// The published CommonJS package wraps the engine in an additional default export.
+vi.mock('butterchurn', () => ({ default: { default: { createVisualizer: engineMock.createVisualizer } } }));
+vi.mock('butterchurn-presets', () => ({ default: { getPresets: () => ({ Aurora: {}, Nebula: {} }) } }));
+
 const emptyPage: Page<Track> = { items: [], page: 1, limit: 5, total: 0, pages: 1 };
 const track: Track = {
   id: 'track-42',
@@ -44,7 +53,7 @@ describe('TracksPageComponent', () => {
     }).compileComponents();
   });
 
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.clearAllMocks(); });
 
   function createComponent(): void {
     fixture = TestBed.createComponent(TracksPageComponent);
@@ -61,6 +70,85 @@ describe('TracksPageComponent', () => {
     expect(component.error()).toBe('Impossible de charger les pistes.');
     expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent)
       .toContain('Impossible de charger les pistes.');
+  });
+
+  it('charge le véritable format d’export Butterchurn et applique les presets sans barres', async () => {
+    const node = { connect: vi.fn(), pan: { value: 0 } };
+    vi.stubGlobal('AudioContext', class {
+      state = 'running'; destination = node;
+      createAnalyser() { return node; }
+      createMediaElementSource() { return node; }
+      createStereoPanner() { return node; }
+      close() { return Promise.resolve(); }
+    });
+    let nextFrame: FrameRequestCallback | undefined;
+    vi.stubGlobal('requestAnimationFrame', vi.fn((callback: FrameRequestCallback) => {
+      nextFrame = callback;
+      return 1;
+    }));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    engineMock.createVisualizer.mockReturnValue(engineMock);
+    createComponent();
+    fixture.componentRef.setInput('section', 'player');
+    component.audioUrl.set('blob:test');
+    fixture.detectChanges();
+    const canvas = fixture.nativeElement.querySelector('.butterchurn-canvas') as HTMLCanvasElement;
+    Object.defineProperty(canvas, 'clientWidth', { value: 960, configurable: true });
+    Object.defineProperty(canvas, 'clientHeight', { value: 540, configurable: true });
+    vi.stubGlobal('devicePixelRatio', 2);
+    component.onPlay();
+    await vi.waitFor(() => expect(engineMock.render).toHaveBeenCalled());
+    const renderFrame = nextFrame;
+    expect(engineMock.connectAudio).toHaveBeenCalledWith(node);
+    expect(component.presetNames()).toEqual(['Aurora', 'Nebula']);
+    expect(component.selectedPreset()).toBe('Aurora');
+    component.nextPreset();
+    expect(component.selectedPreset()).toBe('Nebula');
+    expect(engineMock.loadPreset).toHaveBeenLastCalledWith({}, 1.5);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.waveform').hidden).toBe(true);
+    expect(fixture.nativeElement.querySelector('option[value="bars"]')).toBeNull();
+    expect(canvas.width).toBe(1920);
+    expect(canvas.height).toBe(1080);
+    expect(engineMock.setRendererSize).toHaveBeenLastCalledWith(1920, 1080);
+    const beforePause = engineMock.render.mock.calls.length;
+    component.onPause();
+    renderFrame?.(16);
+    expect(engineMock.render.mock.calls.length).toBe(beforePause + 1);
+    Object.defineProperty(canvas, 'clientWidth', { value: 1200 });
+    nextFrame?.(32);
+    expect(canvas.width).toBe(2400);
+    expect(engineMock.setRendererSize).toHaveBeenLastCalledWith(2400, 1080);
+    component.audioUrl.set('');
+    fixture.destroy();
+    expect(engineMock.disconnectAudio).toHaveBeenCalledWith(node);
+    expect(cancelAnimationFrame).toHaveBeenCalled();
+  });
+
+  it('demande le plein écran avec le menu de presets et gère un refus', async () => {
+    createComponent();
+    component.audioUrl.set('blob:test');
+    fixture.detectChanges();
+    const panel = fixture.nativeElement.querySelector('.visualizer-panel');
+    panel.requestFullscreen = vi.fn(() => Promise.resolve());
+    await component.toggleFullscreen();
+    expect(panel.requestFullscreen).toHaveBeenCalledOnce();
+    expect(panel.querySelector('.preset-picker')).toBeTruthy();
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    panel.requestFullscreen.mockRejectedValue(new Error('Refus'));
+    await component.toggleFullscreen();
+    expect(component.waveformError()).toContain('plein écran');
+    component.audioUrl.set('');
+  });
+
+  it('change de modèle et conserve le choix après une pause', () => {
+    createComponent();
+    expect(component.visualizerMode()).toBe('butterchurn');
+    component.changeVisualizerMode({ target: { value: 'wave' } } as unknown as Event);
+    component.onPause();
+    expect(component.visualizerMode()).toBe('wave');
+    component.changeVisualizerMode({ target: { value: 'butterchurn' } } as unknown as Event);
+    expect(component.visualizerMode()).toBe('butterchurn');
   });
 
   it('trie par titre, taille et date sans modifier les pistes reçues', () => {

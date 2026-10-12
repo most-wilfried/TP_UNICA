@@ -1,3 +1,4 @@
+import type { Visualizer } from 'butterchurn';
 import { Component, computed, ElementRef, inject, input, OnDestroy, OnInit, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { HttpEventType } from '@angular/common/http';
@@ -20,6 +21,18 @@ export class TracksPageComponent implements OnInit, OnDestroy {
   private readonly service = inject(TrackService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly router = inject(Router);
+  private butterchurn?: Visualizer;
+  private butterchurnLoading?: Promise<void>;
+  private presets: Record<string, object> = {};
+  private destroyed = false;
+  readonly presetNames = signal<string[]>([]);
+  readonly selectedPreset = signal('');
+  readonly fullscreen = signal(false);
+  readonly visualizerPanel = viewChild<ElementRef<HTMLElement>>('visualizerPanel');
+  readonly butterchurnCanvas = viewChild<ElementRef<HTMLCanvasElement>>('butterchurnCanvas');
+  private readonly onFullscreenChange = (): void => {
+    this.fullscreen.set(document.fullscreenElement === this.visualizerPanel()?.nativeElement);
+  };
   private audioContext?: AudioContext;
   private analyser?: AnalyserNode;
   private mediaSource?: MediaElementAudioSourceNode;
@@ -82,7 +95,7 @@ export class TracksPageComponent implements OnInit, OnDestroy {
   readonly regionStart = signal(0);
   readonly regionEnd = signal(0);
   readonly waveformError = signal('');
-  readonly visualizerMode = signal<'bars' | 'mirror' | 'wave' | 'circle'>('bars');
+  readonly visualizerMode = signal<'butterchurn' | 'bars' | 'mirror' | 'wave' | 'circle'>('butterchurn');
   readonly bpm = signal(120);
   readonly detectedBpm = signal<number | null>(null);
   readonly bpmAnalysis = signal('');
@@ -102,6 +115,7 @@ export class TracksPageComponent implements OnInit, OnDestroy {
   file?: File;
 
   constructor() {
+    document.addEventListener('fullscreenchange', this.onFullscreenChange);
     this.load();
   }
 
@@ -277,8 +291,8 @@ export class TracksPageComponent implements OnInit, OnDestroy {
   }
 
   onPause(): void {
+    // MilkDrop keeps evolving on silence while the audio transport is paused.
     this.isPlaying.set(false);
-    this.stopVisualizer();
   }
 
   onTimeUpdate(): void {
@@ -342,9 +356,62 @@ export class TracksPageComponent implements OnInit, OnDestroy {
 
   changeVisualizerMode(event: Event): void {
     const mode = (event.target as HTMLSelectElement).value;
-    if (mode === 'bars' || mode === 'mirror' || mode === 'wave' || mode === 'circle') {
+    if (mode === 'butterchurn' || mode === 'bars' || mode === 'mirror' || mode === 'wave' || mode === 'circle') {
       this.visualizerMode.set(mode);
+      if (this.audioContext) void this.startVisualizer();
     }
+  }
+
+  changePreset(event: Event): void {
+    this.loadPreset((event.target as HTMLSelectElement).value);
+  }
+
+  nextPreset(): void {
+    const names = this.presetNames();
+    if (!names.length) return;
+    this.loadPreset(names[(names.indexOf(this.selectedPreset()) + 1) % names.length]);
+  }
+
+  private loadPreset(name: string): void {
+    if (!this.presets[name] || !this.butterchurn) return;
+    try {
+      this.butterchurn.loadPreset(this.presets[name], 1.5);
+      this.selectedPreset.set(name);
+    } catch (error) {
+      console.error('[Butterchurn] Preset indisponible', error);
+      this.waveformError.set('Ce preset ne peut pas être affiché. Essayez un autre preset.');
+    }
+  }
+
+  async toggleFullscreen(): Promise<void> {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await this.visualizerPanel()?.nativeElement.requestFullscreen();
+    } catch (error) {
+      console.error('[Butterchurn] Plein écran indisponible', error);
+      this.waveformError.set('Le plein écran est indisponible dans ce navigateur.');
+    }
+  }
+
+  private async initializeButterchurn(): Promise<void> {
+    if (this.butterchurn) return;
+    if (this.butterchurnLoading) return this.butterchurnLoading;
+    this.butterchurnLoading = (async () => {
+      const [engine, collection] = await Promise.all([import('butterchurn'), import('butterchurn-presets')]);
+      const canvas = this.butterchurnCanvas()?.nativeElement;
+      if (this.destroyed || !canvas || !this.audioContext || !this.stereoPanner) return;
+      const exportedEngine = engine.default;
+      const factory = 'default' in exportedEngine ? exportedEngine.default : exportedEngine;
+      const visualizer = factory.createVisualizer(this.audioContext, canvas, { width: 800, height: 450, pixelRatio: 1 });
+      this.butterchurn = visualizer;
+      visualizer.connectAudio(this.stereoPanner);
+      this.presets = collection.default.getPresets();
+      const names = Object.keys(this.presets).sort((a, b) => a.localeCompare(b));
+      this.presetNames.set(names);
+      if (names.length) this.loadPreset(this.selectedPreset() || names[0]);
+    })();
+    try { await this.butterchurnLoading; }
+    finally { this.butterchurnLoading = undefined; }
   }
 
   changeBpm(event: Event): void {
@@ -515,16 +582,43 @@ export class TracksPageComponent implements OnInit, OnDestroy {
         this.analyser.connect(this.audioContext.destination);
       }
       if (this.audioContext.state === 'suspended') await this.audioContext.resume();
+      if (this.visualizerMode() === 'butterchurn') await this.initializeButterchurn();
+      if (this.destroyed) return;
       this.waveformError.set('');
       this.stopVisualizer();
       this.drawVisualizer();
     } catch (error) {
       console.error('[TracksPage] Visualiseur indisponible', error);
-      this.waveformError.set('Le visualiseur animé ne peut pas être affiché sur ce navigateur.');
+      this.stopVisualizer();
+      this.waveformError.set('Impossible de démarrer Butterchurn. Vérifiez que WebGL 2 et l’accélération graphique sont disponibles, puis relancez la lecture.');
     }
   }
 
   private drawVisualizer(): void {
+    if (this.destroyed) return;
+    if (this.visualizerMode() === 'butterchurn' && this.butterchurn) {
+      const canvas = this.butterchurnCanvas()?.nativeElement;
+      if (!canvas) return;
+      const ratio = Math.min(devicePixelRatio || 1, 2);
+      const width = Math.max(1, Math.floor(canvas.clientWidth * ratio));
+      const height = Math.max(1, Math.floor(canvas.clientHeight * ratio));
+      try {
+        if (canvas.width !== width || canvas.height !== height) {
+          // Butterchurn resizes its textures, but not the output canvas.
+          // Keep the drawing buffer and viewport in the same pixel coordinates.
+          canvas.width = width;
+          canvas.height = height;
+          this.butterchurn.setRendererSize(width, height);
+        }
+        this.butterchurn.render();
+      } catch (error) {
+        console.error('[Butterchurn] Rendu impossible', error);
+        this.waveformError.set('Rendu Butterchurn indisponible. Choisissez un autre preset ou modèle.');
+        return;
+      }
+      this.animationFrameId = requestAnimationFrame(() => this.drawVisualizer());
+      return;
+    }
     const canvas = this.waveform()?.nativeElement;
     const analyser = this.analyser;
     if (!canvas || !analyser) return;
@@ -549,7 +643,7 @@ export class TracksPageComponent implements OnInit, OnDestroy {
     else if (mode === 'circle') this.drawCircleModel(context, values, width, height);
     else this.drawBarModel(context, values, width, height, mode === 'mirror');
 
-    if (this.beatGridEnabled()) this.drawBeatGrid(context, width, height);
+    if (this.section() === 'studio' && this.beatGridEnabled()) this.drawBeatGrid(context, width, height);
 
     this.animationFrameId = requestAnimationFrame(() => this.drawVisualizer());
   }
@@ -734,6 +828,9 @@ export class TracksPageComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.destroyed = true;
+    document.removeEventListener('fullscreenchange', this.onFullscreenChange);
+    if (this.stereoPanner) this.butterchurn?.disconnectAudio(this.stereoPanner);
     this.stopVisualizer();
     this.stopMetronome();
     void this.audioContext?.close();

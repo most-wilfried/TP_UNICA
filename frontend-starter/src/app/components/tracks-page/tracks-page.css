@@ -1,1 +1,12 @@
 :host { display: block; }
+
+.visualizer-panel { background: #06100f; padding: 1rem; border-radius: 1rem; color: #eefaf6; }
+.visualizer-panel [hidden] { display: none !important; }
+.preset-picker { display: grid; gap: .4rem; margin: .75rem 0; }
+.preset-picker select { width: 100%; min-width: 0; }
+.visualizer-actions { display: flex; gap: .6rem; flex-wrap: wrap; margin-bottom: .75rem; }
+.butterchurn-canvas { display: block; width: 100%; height: clamp(240px, 45vh, 560px); background: #000; border-radius: .75rem; }
+.visualizer-panel:fullscreen { box-sizing: border-box; width: 100vw; height: 100vh; display: flex; flex-direction: column; border-radius: 0; overflow: auto; }
+.visualizer-panel:fullscreen .butterchurn-canvas,
+.visualizer-panel:fullscreen .waveform { flex: 1; min-height: 0; height: auto; cursor: default; }
+.visualizer-panel:fullscreen .preset-picker { max-width: 100%; }
