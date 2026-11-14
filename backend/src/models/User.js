@@ -7,7 +7,13 @@ import bcrypt from "bcryptjs";
  */
 const schema = new mongoose.Schema(
   {
-    name: { type: String, required: true, trim: true, minlength: 2 },
+    name: { type: String, required: true, trim: true, minlength: 2, maxlength: 100 },
+    bio: {type:String,trim:true,maxlength:500,default:''},
+    avatarUrl: {type:String,maxlength:2000,default:''},
+    discoverable: {type:Boolean,default:true},
+    notificationsEnabled: {type:Boolean,default:true},
+    suspended: {type:Boolean,default:false},
+    role: {type:String,enum:['user','admin'],default:'user'},
     email: {
       type: String,
       required: true,
@@ -31,21 +37,20 @@ schema.virtual("password").set(function (value) {
 });
 
 /**
- * Hook exécutéDans un nouveau terminal (conseil : utilisez Git Bash comme shell dans le terminal), testez le projet frontend Angular proposé. Le fichier `proxy.conf.json` se trouve à la racine du projet frontend ; sa propriété `target` contient normalement `http://localhost:3000`. Si le backend est lancé sur un autre port, adaptez cette valeur.
- avant la validation d'un nouvel utilisateur.
+ * Hook exécuté avant la validation d'un nouvel utilisateur.
  * bcrypt transforme le mot de passe en hash irréversible ; le mot de passe
  * original ne doit jamais être écrit dans la base ni dans les logs.
  */
 schema.pre("validate", async function () {
   if (this.isNew && this._plainPassword) {
-    console.debug(`[user-model] Hachage du mot de passe pour ${this.email}`);
+    console.debug("[user-model] Hachage du mot de passe");
     this.passwordHash = await bcrypt.hash(this._plainPassword, 10);
   }
 });
 
 /** Compare un mot de passe reçu avec le hash stocké. */
 schema.methods.verifyPassword = function (value) {
-  console.debug(`[user-model] Vérification du mot de passe pour ${this.email}`);
+  console.debug("[user-model] Vérification du mot de passe");
   return bcrypt.compare(value, this.passwordHash);
 };
 
@@ -56,6 +61,7 @@ schema.methods.toPublic = function () {
     name: this.name,
     email: this.email,
     createdAt: this.createdAt,
+    bio:this.bio,avatarUrl:this.avatarUrl,discoverable:this.discoverable,notificationsEnabled:this.notificationsEnabled,role:this.role,
   };
 };
 

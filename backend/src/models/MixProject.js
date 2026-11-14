@@ -19,6 +19,7 @@ const versionSchema = new mongoose.Schema({
 const schema = new mongoose.Schema({
   ownerId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
   sharedWith: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+  visibility: {type:String,enum:['private','friends'],default:'private'},
   name: { type: String, required: true, trim: true, maxlength: 120 },
   trackId: { type: mongoose.Schema.Types.ObjectId, ref: "Track" },
   artist: { type: String, trim: true, default: "" },
@@ -31,7 +32,7 @@ const schema = new mongoose.Schema({
 
 schema.methods.toPublic = function () {
   return {
-    id: this.id, name: this.name, trackId: this.trackId ? String(this.trackId) : null,
+    id: this.id, ownerId:String(this.ownerId), visibility:this.visibility || 'private', name: this.name, trackId: this.trackId ? String(this.trackId) : null,
     artist: this.artist, genre: this.genre, tags: this.tags,
     coverImageUrl: this.coverImageUrl, settings: this.settings,
     versions: this.versions, sharedWith: this.sharedWith.map(String),

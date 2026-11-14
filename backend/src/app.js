@@ -1,3 +1,9 @@
+import { parseFile } from 'music-metadata';
+import { fileTypeFromFile } from 'file-type';
+import helmet from 'helmet';
+import { rateLimit } from 'express-rate-limit';
+import { socialRoutes, uploadMetadata } from './social/routes.js';
+import { escaped, friends, validId } from './social/access.js';
 import express from "express";
 import cors from "cors";
 import multer from "multer";
@@ -25,6 +31,7 @@ try {
 }
 
 // Ce secret reste côté serveur. Il ne doit jamais être copié dans Angular.
+if (process.env.NODE_ENV === 'production' && (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32)) throw new Error('JWT_SECRET robuste requis en production');
 const SECRET = process.env.JWT_SECRET || "tp1-development-secret";
 
 // La taille maximale d'un fichier audio est de 25 Mo. Les fichiers plus gros
@@ -39,6 +46,8 @@ const allowed = new Set([
   "audio/ogg",
   "audio/mp4",
   "audio/x-m4a",
+  "audio/webm",
+  "video/mp4", "video/webm", "image/png", "image/jpeg", "image/webp",
 ]);
 
 /**
@@ -54,7 +63,7 @@ function token(user) {
 }
 
 /** Middleware Express qui protège les routes privées. */
-function auth(req, res, next) {
+async function auth(req, res, next) {
   const raw = req.headers.authorization;
 
   // Le token est transmis dans l'en-tête Authorization sous la forme
@@ -68,7 +77,8 @@ function auth(req, res, next) {
   try {
     // jwt.verify vérifie la signature et la date d'expiration du token.
     // On ne logue jamais sa valeur, car un JWT permettrait une usurpation.
-    req.auth = jwt.verify(raw.slice(7), SECRET);
+    req.auth = jwt.verify(raw.slice(7), SECRET, {algorithms:['HS256']});
+    if (!validId(req.auth.sub) || !await User.exists({_id:req.auth.sub,suspended:{$ne:true}})) return res.status(401).json({message:'Session invalide'});
     console.log(`[auth] Token accepté pour ${req.auth.sub}`);
     next();
   } catch (error) {
@@ -94,7 +104,7 @@ const storage = multer.diskStorage({
   filename: (_request, file, callback) => {
     const filename =
       crypto.randomUUID() + path.extname(file.originalname).toLowerCase();
-    console.log(`[multer] Nom de stockage généré pour ${file.originalname}`);
+    console.log("[multer] Nom de stockage sécurisé généré");
     callback(null, filename);
   },
 });
@@ -134,7 +144,7 @@ export function createApp() {
     const startedAt = Date.now();
     res.on("finish", () => {
       console.log(
-        `[http] ${req.method} ${req.originalUrl} -> ${res.statusCode} (${Date.now() - startedAt} ms)`,
+        `[http] ${req.method} ${req.path} -> ${res.statusCode} (${Date.now() - startedAt} ms)`,
       );
     });
     next();
@@ -143,12 +153,19 @@ export function createApp() {
   // CORS est nécessaire pour que le frontend Angular puisse appeler l'API.
   // C'est-à-dire que le navigateur autorise les requêtes cross-origin depuis localhost:4200.
   // Dans un vrai projet, il est recommandé de limiter les origines autorisées.
-  app.use(cors());
+  app.disable('x-powered-by');
+  app.use(helmet({contentSecurityPolicy:false,crossOriginResourcePolicy:{policy:'same-site'}}));
+  const origins=(process.env.CORS_ORIGINS || 'http://localhost:4200,http://localhost:4201').split(',');
+  app.use(cors({origin:(origin,callback)=>callback(null,!origin||origins.includes(origin))}));
+  app.use('/api',rateLimit({windowMs:60000,limit:300,standardHeaders:'draft-8',legacyHeaders:false}));
+  app.use('/api/auth',rateLimit({windowMs:15*60000,limit:50,standardHeaders:'draft-8',legacyHeaders:false}));
 
   // Express ne gère pas nativement le JSON : ce middleware transforme le corps JSON en objet JavaScript 
   // accessible via req.body.
   // Il est placé avant les routes pour que toutes les requêtes JSON soient traitées.
-  app.use(express.json());
+  app.use(express.json({limit:'256kb'}));
+  const optionalAuth=(req,res,next)=>req.headers.authorization?auth(req,res,next):next();
+  app.use('/api',socialRoutes({auth,optionalAuth,uploads:UPLOADS}));
 
   /** Endpoint public utilisé pour vérifier que l'API répond. */
   app.get("/api/health", (_req, res) => {
@@ -167,7 +184,7 @@ export function createApp() {
       const { name, email, password } = req.body || {};
       console.log(`[auth] Tentative d'inscription pour ${email || "email absent"}`);
 
-      if (!name || !email || !password || password.length < 8) {
+      if (typeof name!=='string' || typeof email!=='string' || typeof password!=='string' || name.trim().length<2 || name.length>100 || email.length>254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length<8 || password.length>128) {
         console.warn("[auth] Inscription refusée : données invalides ou incomplètes");
         return res.status(400).json({
           message: "Nom, email et mot de passe de 8 caractères requis",
@@ -197,7 +214,10 @@ export function createApp() {
     try {
         // req.body est déjà un objet JavaScript grâce au middleware express.json() placé plus haut.
         // il contient les champs email et password envoyés par le frontend Angular.
-      const email = String(req.body?.email || "").toLowerCase();
+      if(typeof req.body?.email!=='string'||typeof req.body?.password!=='string'||req.body.email.length>254||!req.body.password||req.body.password.length>128){
+        return res.status(400).json({message:'Email et mot de passe valides requis'});
+      }
+      const email = req.body.email.trim().toLowerCase();
       console.log(`[auth] Tentative de connexion pour ${email || "email absent"}`);
 
       // Sélectionne le mot de passe haché pour vérifier les identifiants.
@@ -207,7 +227,7 @@ export function createApp() {
       // des raisons de sécurité.
       const user = await User.findOne({ email }).select("+passwordHash");
 
-      if (!user || !(await user.verifyPassword(req.body?.password || ""))) {
+      if (!user || user.suspended || !(await user.verifyPassword(req.body.password))) {
         console.warn(`[auth] Identifiants incorrects pour ${email}`);
         return res.status(401).json({ message: "Identifiants incorrects" });
       }
@@ -252,7 +272,7 @@ export function createApp() {
       const user = await User.findByIdAndUpdate(
         req.auth.sub,
         { $set: { name: req.body?.name } },
-        { new: true, runValidators: true },
+        { returnDocument: 'after', runValidators: true },
       );
 
       if (!user) {
@@ -271,9 +291,13 @@ export function createApp() {
   /** Retourne une page des pistes appartenant exclusivement à l'utilisateur. */
   app.get("/api/tracks", auth, async (req, res, next) => {
     try {
-      const page = Math.max(1, Number(req.query.page) || 1);
-      const limit = Math.min(20, Math.max(1, Number(req.query.limit) || 5));
+      const page = Math.max(1, Math.min(10000, parseInt(req.query.page,10) || 1));
+      const limit = Math.min(20, Math.max(1, parseInt(req.query.limit,10) || 5));
       const filter = { ownerId: req.auth.sub };
+      if(typeof req.query.q==='string'&&req.query.q.trim()){
+        const regex=new RegExp(escaped(req.query.q.trim().slice(0,100)),'i');
+        filter.$or=[{title:regex},{style:regex},{tags:regex}];
+      }
 
       console.log(`[tracks] Lecture page=${page}, limit=${limit}, user=${req.auth.sub}`);
 
@@ -343,9 +367,18 @@ export function createApp() {
           return res.status(400).json({ message: "Fichier audio requis" });
         }
 
+        const detected=await fileTypeFromFile(req.file.path);
+        const formats={mp3:['audio/mpeg'],wav:['audio/wav','audio/x-wav'],ogg:['audio/ogg'],opus:['audio/ogg'],m4a:['audio/mp4','audio/x-m4a'],mp4:['audio/mp4','video/mp4'],webm:['audio/webm','video/webm'],png:['image/png'],jpg:['image/jpeg'],webp:['image/webp']};
+        if(!detected || !formats[detected.ext]?.includes(req.file.mimetype))throw Object.assign(new Error('Le contenu du fichier ne correspond pas à un média audio autorisé'),{status:400});
+        const metadata=await uploadMetadata(req.body,req.auth.sub);
+        if(!['png','jpg','webp'].includes(detected.ext)){
+          try {const audioMetadata=await parseFile(req.file.path,{duration:true});metadata.duration=Number.isFinite(audioMetadata.format.duration)?Math.max(0,audioMetadata.format.duration):0;}
+          catch(error){console.error('[upload] Métadonnées illisibles',error.name);throw Object.assign(new Error('Média illisible ou format non pris en charge'),{status:400});}
+        }
         const track = await Track.create({
+          ...metadata,
           ownerId: req.auth.sub,
-          title: req.body.title || req.file.originalname,
+          title: metadata.title,
           originalName: req.file.originalname,
           storedName: req.file.filename,
           mimeType: req.file.mimetype,
@@ -445,7 +478,8 @@ export function createApp() {
       const projects = await MixProject.find({
         $or: [{ ownerId: req.auth.sub }, { sharedWith: req.auth.sub }],
       }).sort({ updatedAt: -1 });
-      res.json(projects.map((project) => project.toPublic()));
+      const visible=[];for(const project of projects)if(String(project.ownerId)===req.auth.sub || await friends(project.ownerId,req.auth.sub))visible.push(project.toPublic());
+      res.json(visible);
     } catch (error) {
       console.error("[projects] Lecture impossible", error);
       next(error);
@@ -454,7 +488,10 @@ export function createApp() {
 
   app.post("/api/projects", auth, async (req, res, next) => {
     try {
-      const project = await MixProject.create({ ...req.body, ownerId: req.auth.sub });
+      const body=req.body || {};
+      const safe={};for(const key of ['name','artist','genre','tags','coverImageUrl','settings'])if(body[key]!==undefined)safe[key]=body[key];
+      if(body.trackId){const track=await Track.findOne({_id:body.trackId,ownerId:req.auth.sub});if(!track)return res.status(404).json({message:'Piste inconnue'});safe.trackId=track.id;}
+      const project = await MixProject.create({ ...safe, ownerId: req.auth.sub });
       res.status(201).json(project.toPublic());
     } catch (error) {
       console.error("[projects] Création impossible", error);
@@ -467,6 +504,7 @@ export function createApp() {
       const current = await MixProject.findOne({ _id: req.params.id, ownerId: req.auth.sub });
       if (!current) return res.status(404).json({ message: "Projet inconnu" });
       current.versions.push({ number: current.versions.length + 1, settings: current.settings });
+      if(req.body?.trackId){const track=await Track.findOne({_id:req.body.trackId,ownerId:req.auth.sub});if(!track)return res.status(404).json({message:'Piste inconnue'});}
       const allowed = ["name", "trackId", "artist", "genre", "tags", "coverImageUrl", "settings"];
       for (const field of allowed) if (req.body?.[field] !== undefined) current[field] = req.body[field];
       await current.save();
@@ -490,12 +528,13 @@ export function createApp() {
 
   app.post("/api/projects/:id/share", auth, async (req, res, next) => {
     try {
-      const user = await User.findOne({ email: String(req.body?.email || "").toLowerCase() });
-      if (!user) return res.status(404).json({ message: "Utilisateur inconnu" });
+      if(req.body?.userId&&!validId(req.body.userId))return res.status(400).json({message:"Identifiant invalide"});
+      const user = req.body?.userId?await User.findById(req.body.userId):await User.findOne({ email: String(req.body?.email || "").toLowerCase() });
+      if (!user || !await friends(req.auth.sub,user.id)) return res.status(404).json({message:'Destinataire non autorisé'});
       const project = await MixProject.findOneAndUpdate(
         { _id: req.params.id, ownerId: req.auth.sub },
-        { $addToSet: { sharedWith: user.id } },
-        { new: true },
+        { $addToSet: { sharedWith: user.id }, $set:{visibility:'friends'} },
+        { returnDocument: 'after' },
       );
       if (!project) return res.status(404).json({ message: "Projet inconnu" });
       res.json(project.toPublic());
@@ -504,6 +543,8 @@ export function createApp() {
       next(error);
     }
   });
+
+  app.delete('/api/projects/:id/share/:userId',auth,async(req,res,next)=>{try{if(!validId(req.params.id)||!validId(req.params.userId))return res.status(400).json({message:'Identifiant invalide'});const project=await MixProject.findOneAndUpdate({_id:req.params.id,ownerId:req.auth.sub},{$pull:{sharedWith:req.params.userId}},{returnDocument:'after'});if(!project)return res.status(404).json({message:'Projet inconnu'});res.json(project.toPublic());}catch(error){console.error('[Projet] Révocation impossible',error.message);next(error);}});
 
   /** Gestionnaire central des erreurs connues de l'application. */
   app.use((error, _req, res, next) => {
@@ -522,7 +563,11 @@ export function createApp() {
       return res.status(404).json({ message: "Ressource inconnue" });
     }
 
-    next(error);
+    if(error.status) return res.status(error.status).json({message:error.message});
+    if(error.code===11000)return res.status(409).json({message:'Cet élément existe déjà'});
+    if(error.type==='entity.too.large')return res.status(413).json({message:'Requête trop volumineuse'});
+    if(error instanceof SyntaxError)return res.status(400).json({message:'JSON invalide'});
+    res.status(500).json({message:'Erreur interne du serveur'});
   });
 
   return app;

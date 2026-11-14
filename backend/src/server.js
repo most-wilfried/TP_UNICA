@@ -30,6 +30,7 @@ try {
 
 try {
   // Le compte de démonstration facilite les premiers tests des étudiants.
+  if(process.env.NODE_ENV==='production' || process.env.SEED_DEMO==='false') { console.log('[startup] Compte démo désactivé'); } else {
   const demoEmail = "demo@example.com";
   const demoExists = await User.exists({ email: demoEmail });
 
@@ -43,13 +44,14 @@ try {
   } else {
     console.log("[startup] Compte de démonstration déjà présent");
   }
+}
 } catch (error) {
   console.error("[startup] Impossible de préparer le compte de démonstration", error);
   throw error;
 }
 
 const server = createApp().listen(port, () => {
-  console.log(`Guitar Practice Cloud API: http://localhost:${port}/api/health`);
+  console.log(`MOST VIBE API: http://localhost:${port}/api/health`);
 });
 
 // Le callback `error` couvre notamment un port déjà utilisé.

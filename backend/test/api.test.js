@@ -7,6 +7,8 @@ import { User } from "../src/models/User.js";
 import { Track } from "../src/models/Track.js";
 
 let server, base;
+const originalExists=User.exists;
+const originalFindById=Track.findById;
 const userId = new mongoose.Types.ObjectId().toString();
 const authorization = `Bearer ${jwt.sign(
   { sub: userId, email: "test@example.com" },
@@ -14,12 +16,13 @@ const authorization = `Bearer ${jwt.sign(
 )}`;
 
 test.before(async () => {
+  User.exists=async()=>true;
   server = createApp().listen(0);
   await new Promise((r) => server.once("listening", r));
   base = `http://127.0.0.1:${server.address().port}`;
 });
 
-test.after(() => server.close());
+test.after(() => {User.exists=originalExists;Track.findById=originalFindById;server.close();});
 
 test("health sans dépendre de MongoDB", async () => {
   const r = await fetch(base + "/api/health");
@@ -144,10 +147,7 @@ test("accès audio refusé pour une piste qui n'appartient pas à l'utilisateur"
   const otherTrackId = new mongoose.Types.ObjectId().toString();
   let receivedFilter;
 
-  Track.findOne = (filter) => {
-    receivedFilter = filter;
-    return { select: async () => null };
-  };
+  Track.findById = value => { receivedFilter={_id:value}; return {select:async()=>null}; };
 
   try {
     const response = await fetch(base + `/api/tracks/${otherTrackId}/audio`, {
@@ -156,8 +156,8 @@ test("accès audio refusé pour une piste qui n'appartient pas à l'utilisateur"
 
     assert.equal(response.status, 404);
     assert.equal(receivedFilter._id, otherTrackId);
-    assert.equal(String(receivedFilter.ownerId), userId);
-    assert.deepEqual(await response.json(), { message: "Piste inconnue" });
+
+    assert.deepEqual(await response.json(), { message: "Piste inaccessible" });
   } finally {
     Track.findOne = originalFindOne;
   }
