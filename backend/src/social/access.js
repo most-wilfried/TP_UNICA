@@ -10,7 +10,10 @@ export async function blocked(a,b) {
   return !!await Block.exists({$or:[{ownerId:a,targetId:b},{ownerId:b,targetId:a}]});
 }
 export async function friends(a,b) {
-  return !!a && !!b && !!await User.exists({_id:b,suspended:{$ne:true}}) && !(await blocked(a,b)) && !!await Friendship.exists({pair:pairKey(a,b),status:'accepted'});
+  if (!a || !b || String(a) === String(b)) return false;
+  // Les deux comptes doivent rester actifs, quel que soit l'ordre des arguments.
+  const active = await User.countDocuments({_id:{$in:[a,b]},suspended:{$ne:true}});
+  return active === 2 && !(await blocked(a,b)) && !!await Friendship.exists({pair:pairKey(a,b),status:'accepted'});
 }
 export async function canRead(track, userId) {
   if (!track) return false;

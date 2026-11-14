@@ -1387,3 +1387,13 @@ de l'erreur. Fichiers : `backend/src/app.js`, `backend/test/api.test.js`,
 privé dans les logs. Le binôme doit expliquer pourquoi un objet Error de parseur
 peut contenir des données sensibles, même si aucun log explicite de mot de passe
 n'est écrit.
+
+## Contrôle de sécurité — suspension et partage (14 novembre 2026)
+
+Un test HTTP sur MongoDB éphémère a reproduit l'accès d'un ami au projet d'un
+propriétaire suspendu. La fonction `friends(a,b)` ne vérifiait que le second
+compte. Elle vérifie maintenant l'existence et l'état actif des deux comptes.
+Le test couvre accès initial, suspension, refus du projet partagé et réactivation.
+Fichiers : `backend/src/social/access.js`, `backend/test/social.test.js` et
+`API_CONTRACT.md`. Le binôme doit expliquer pourquoi un contrôle d'autorisation
+sur une relation doit être symétrique et revérifié à chaque lecture.

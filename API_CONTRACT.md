@@ -152,3 +152,11 @@ contrat métier. Un corps JSON mal formé produit `400 {"message":"JSON invalide
 un corps dépassant 256 Ko produit `413 {"message":"Requête trop volumineuse"}`.
 Le corps brut et les diagnostics du parseur ne sont ni renvoyés ni journalisés
 par le gestionnaire central.
+
+### Suspension et projets partagés — 14 novembre 2026
+
+`GET /api/projects` (JWT requis, sans corps ni paramètre supplémentaire,
+`200 MixProject[]`, `401` session invalide) exclut les projets partagés dont le
+propriétaire est suspendu. Une relation autorisant un partage exige désormais
+deux comptes existants non suspendus ; une réactivation rétablit l'accès si
+l'amitié et le partage existent toujours.

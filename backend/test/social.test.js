@@ -106,6 +106,19 @@ test('admin cannot read private files or conversations, and role cannot be escal
  assert.equal((await call('/auth/login',null,'POST',{email:'bob@example.test',password})).response.status,401);
  await call('/admin/users/'+b.user.id,c,'PATCH',{suspended:false});
 });
+test('suspending a project owner revokes shared project access until reinstatement',async()=>{
+ const project=await call('/projects',b,'POST',{name:'Projet du compte suspendu'});
+ assert.equal(project.response.status,201);
+ assert.equal((await call('/projects/'+project.json.id+'/share',b,'POST',{userId:a.user.id})).response.status,200);
+ assert.ok((await call('/projects',a)).json.some(item=>item.id===project.json.id));
+ try {
+  assert.equal((await call('/admin/users/'+b.user.id,c,'PATCH',{suspended:true})).response.status,200);
+  assert.equal((await call('/projects',a)).json.some(item=>item.id===project.json.id),false);
+ } finally {
+  await call('/admin/users/'+b.user.id,c,'PATCH',{suspended:false});
+ }
+ assert.ok((await call('/projects',a)).json.some(item=>item.id===project.json.id));
+});
 test('login rejects malformed credentials without an internal error',async()=>{
  for(const body of [{email:{value:'alice@example.test'},password}, {email:'alice@example.test',password:{}}, {email:'alice@example.test',password:''}])assert.equal((await call('/auth/login',null,'POST',body)).response.status,400);
  const session=await call('/auth/login',null,'POST',{email:'alice@example.test',password});assert.equal(session.response.status,200);assert.equal(session.json.user.id,a.user.id);
