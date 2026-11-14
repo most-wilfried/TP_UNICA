@@ -162,3 +162,26 @@ test("accès audio refusé pour une piste qui n'appartient pas à l'utilisateur"
     Track.findOne = originalFindOne;
   }
 });
+
+
+test("JSON invalide : aucune donnée du corps dans la réponse ou les logs", async () => {
+  const marker = 'private-json-marker-123';
+  const originalError = console.error;
+  let leaked = false;
+  console.error = (...args) => {
+    leaked ||= args.some(value => String(value).includes(marker) || (value?.body || '').includes(marker));
+  };
+  try {
+    const response = await fetch(base + '/api/auth/login', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: '{"password":"' + marker + '",}',
+    });
+    assert.equal(response.status, 400);
+    const result = await response.json();
+    assert.equal(JSON.stringify(result).includes(marker), false);
+    assert.deepEqual(result, {message: 'JSON invalide'});
+    assert.equal(leaked, false);
+  } finally {
+    console.error = originalError;
+  }
+});

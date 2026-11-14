@@ -548,7 +548,13 @@ export function createApp() {
 
   /** Gestionnaire central des erreurs connues de l'application. */
   app.use((error, _req, res, next) => {
-    console.error("[error] Erreur reçue par le gestionnaire central", error);
+    // Les erreurs du parseur peuvent contenir le corps brut (mot de passe,
+    // message privé). Ne jamais journaliser l'objet Error complet ici.
+    console.error("[error] Erreur reçue par le gestionnaire central", {
+      name: error.name, status: error.status || 500,
+    });
+    if (error.type === 'entity.parse.failed') return res.status(400).json({message:'JSON invalide'});
+    if (error.type === 'entity.too.large') return res.status(413).json({message:'Requête trop volumineuse'});
 
     if (
       error instanceof multer.MulterError ||

@@ -1374,3 +1374,16 @@ Le bilan complet figure dans [MOST_VIBE.md](MOST_VIBE.md) et les étapes de mise
 en ligne dans [deployment/README.md](deployment/README.md). Le binôme doit expliquer
 les ACL, leur révocation, les crédits dérivés par le serveur, la séparation des
 privilèges d’administration et la différence entre tests DB isolés et production.
+
+## Contrôle de sécurité — erreurs JSON (14 novembre 2026)
+
+Objectif : vérifier que les requêtes invalides ne divulguent pas de données
+privées. Un test de régression a confirmé que le gestionnaire renvoyait le
+diagnostic brut du parseur ; l'objet erreur journalisé contenait aussi le corps
+reçu. Le gestionnaire répond désormais avec un message générique pour le JSON
+invalide et les corps trop volumineux ; ses logs se limitent au nom et au statut
+de l'erreur. Fichiers : `backend/src/app.js`, `backend/test/api.test.js`,
+`API_CONTRACT.md`. Le test vérifie le statut, la réponse et l'absence du marqueur
+privé dans les logs. Le binôme doit expliquer pourquoi un objet Error de parseur
+peut contenir des données sensibles, même si aucun log explicite de mot de passe
+n'est écrit.

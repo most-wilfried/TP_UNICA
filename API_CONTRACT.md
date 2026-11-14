@@ -144,3 +144,11 @@ requête. Le premier administrateur se configure via l’outil opérateur
 `backend/scripts/set-admin.js`, avec accès sécurisé au serveur. Il n’obtient
 aucun contournement de `canRead` sur les fichiers privés ni des règles de la
 messagerie. Voir `deployment/README.md` pour la configuration et les contrôles.
+
+### Durcissement des erreurs JSON — 14 novembre 2026
+
+Toutes les routes recevant du JSON conservent leur authentification et leur
+contrat métier. Un corps JSON mal formé produit `400 {"message":"JSON invalide"}` ;
+un corps dépassant 256 Ko produit `413 {"message":"Requête trop volumineuse"}`.
+Le corps brut et les diagnostics du parseur ne sont ni renvoyés ni journalisés
+par le gestionnaire central.
