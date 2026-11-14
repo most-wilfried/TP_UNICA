@@ -1,5 +1,37 @@
 # Rapport d'usage de l'IA - TP1
 
+## Suivi de livraison — 14 novembre 2026
+
+Les entrées historiques ci-dessous sont conservées telles qu'elles existaient
+avant cette session. Leurs dates ne sont pas réattribuées à d'autres journées.
+Les modifications applicatives étaient déjà présentes dans le répertoire de
+travail au début de cette session ; leur enregistrement Git est organisé en lots
+techniques le 14 novembre 2026. Ces lots décrivent une livraison, pas des journées
+de développement distinctes ni des fonctionnalités créées pendant cette session.
+
+| Étape de livraison | Périmètre | Vérification |
+| --- | --- | --- |
+| 1 — API sociale | Modèles MongoDB, droits de partage/remix, messages, collections, modération et contrat HTTP | Tests backend sur base éphémère |
+| 2 — Application Angular | Studio audio, bibliothèque de démonstration, lecteur persistant et interfaces sociales | Tests frontend et build Angular |
+| 3 — Déploiement | Docker, Nginx et guide de configuration | Préparation uniquement, aucun déploiement effectué |
+| 4 — Documentation | Bilans, captures existantes et présent suivi de livraison | Cohérence du découpage et contrôle Git |
+
+Résultats vérifiés le 14 novembre 2026 : **17 tests backend sur 17**, **50 tests
+frontend sur 50** (16 fichiers), et **build Angular réussi**. Deux avertissements
+CommonJS subsistent pour Butterchurn et ses presets. Ces résultats actualisent
+les chiffres des entrées historiques sans les réécrire.
+
+Références des trois premiers lots : `fe2f168` (API), `3295836` (Angular),
+`668690a` (préparation du déploiement). Le quatrième lot contient ce suivi et
+les documents existants. Les commits sont datés de leur enregistrement réel.
+
+Cette session porte sur la vérification et l'enregistrement des changements
+existants. Aucun contrôle manuel dans le navigateur n'a été réalisé pendant
+cette session. Les captures antérieures restent des preuves historiques.
+
+
+> **État à jour au 14 octobre 2026 :** consulter la [transformation MOST VIBE](#transformation-most-vibe--14-octobre-2026). Les sections précédentes décrivent l’historique ; certaines fonctions alors annoncées comme absentes ont depuis été réalisées.
+
 Pour chaque mission, détailler et fournir des explications concernant : objectif; prompt principal; plan proposé par l'agent; vérifications réalisées par le binôme; erreurs ou propositions rejetées; fichiers effectivement modifiés; preuve de fonctionnement; ce que chaque membre sait maintenant expliquer sans l'agent.
 
 ## Mission — Audit fonctionnel et remise en état (23 septembre 2026)
@@ -899,3 +931,446 @@ les quatre modèles de visualisation et la grille rythmique.
 - `frontend-starter/src/app/components/tracks-page/tracks-page.html` ;
 - `frontend-starter/src/styles.css` ;
 - `RAPPORT_IA_MODELE.md`.
+
+
+## Bilan du studio de mixage — 14 octobre 2026
+
+### Objectif et demandes de l’utilisateur
+
+Faire évoluer le studio vers une interface inspirée de Virtual DJ : deux platines
+A et B avec scratch, une console occupant toute la largeur, des visualisations
+musicales en arrière-plan modifiables, des réglages de tonalité et d’égalisation,
+un enregistrement du mix, une entrée micro et une collection classée par style.
+Corriger aussi le fonctionnement du mode clair/sombre dans Mixage.
+
+Ce bilan couvre les interventions des 12 et 14 octobre 2026. Il complète les
+priorités décrites le 2 octobre sans prétendre que toutes les fonctions d’un
+logiciel DJ professionnel sont déjà présentes.
+
+### Plan suivi par l’assistant
+
+1. Lire les consignes Angular, le contrat HTTP et les composants existants.
+2. Remplacer le studio monopiste par deux transports audio indépendants.
+3. Ajouter le crossfader, le scratch et le fond musical configurable.
+4. Ajouter les réglages de tonalité, l’égaliseur, le micro et l’enregistrement.
+5. Relier les composants du studio au thème global de l’application.
+6. Générer et intégrer six boucles instrumentales originales par style.
+7. Vérifier la compilation, les tests, les fichiers WAV et les parcours navigateur.
+8. Documenter les résultats, les limites et les prochaines améliorations.
+
+### Ce qui a été réalisé
+
+| Domaine | Fonctionnalités effectivement présentes |
+|---|---|
+| Platines A / B | Chargement indépendant, lecture/pause, retour au début avec CUE, position de lecture, volume et boucle sur le morceau entier. |
+| Scratch | Manipulation verticale à la souris ou au toucher, et flèches gauche/droite au clavier ; lecture de fragments vers l’avant ou depuis un buffer inversé. Reprise de la lecture si elle était active. |
+| Mixage | Crossfader à puissance constante, volume de sortie général, réglage de vitesse par platine. |
+| Tonalité et égaliseur | Transposition de −12 à +12 demi-tons ; graves, médiums et aigus de −24 à +12 dB ; réinitialisation des réglages. |
+| Présentation | Console sur toute la largeur, platines agrandies, adaptation aux petits écrans et boutons dont les couleurs/lueurs réagissent au signal audio. |
+| Fond musical | Butterchurn/MilkDrop avec choix du preset et bouton « Preset suivant » ; modèles Barres, Miroir, Onde et Cercle. Le visualiseur reçoit la sortie commune des platines. |
+| Thèmes | Mode clair et mode sombre appliqués au fond, aux panneaux, aux boutons, aux textes, aux égaliseurs et aux commandes du micro. Les disques conservent leur aspect vinyle sombre. |
+| Micro | Activation à la demande avec autorisation du navigateur, volume de voix, mute, ajout de la voix à la sortie générale et à l’enregistrement. Désactivation et libération du périphérique. |
+| Enregistrement | Démarrage/arrêt, compteur de durée, capture de la sortie générale incluant les réglages et le micro actif, écoute des prises et téléchargement. |
+| Styles musicaux | Choix du style à l’import, reclassement des pistes et filtres sur la page courante. Les styles des imports sont mémorisés localement dans le navigateur. |
+| Collection incluse | Six boucles originales accessibles dans Bibliothèque et Mixage, filtrables par style, chargeables directement sur A ou B sans import dans l’API. |
+
+### Pistes musicales ajoutées et utilisables
+
+Il s’agit de **boucles instrumentales originales de démonstration**, synthétisées
+par un script Python sans extrait de chanson commerciale ni échantillon tiers.
+Les styles sont des inspirations pour des boucles d’entraînement.
+
+| Style | Titre | Tempo | Durée approximative |
+|---|---|---|---|
+| House | Lumière de nuit | 124 BPM | 15,48 s |
+| Hip-hop | Promenade | 88 BPM | 21,82 s |
+| Afrobeat | Soleil levant | 104 BPM | 18,46 s |
+| Amapiano | Horizon | 112 BPM | 17,14 s |
+| Reggae | Jardin tranquille | 78 BPM | 24,62 s |
+| Blues | Route du soir | 96 BPM | 20,00 s |
+
+Chaque piste contient huit mesures à quatre temps. Les fichiers sont des WAV
+PCM mono, 16 bits, 22 050 Hz, servis depuis `public/audio/demos/`. Le catalogue
+fournit le style, le BPM, la durée et l’adresse de chaque fichier.
+
+Pour les utiliser : ouvrir « Pistes par style musical », sélectionner un style,
+cliquer sur « Charger A » ou « Charger B », puis lancer la platine. Le bouton
+« Boucle » permet de prolonger la lecture. Depuis la bibliothèque, les boutons
+« Écouter » et « Mixer » ouvrent l’espace correspondant.
+
+### Fonctionnement technique à expliquer
+
+```text
+Buffer audio de la platine A ou B
+→ filtres graves / médiums / aigus
+→ gain de platine et crossfader
+→ sortie générale
+→ analyseur et haut-parleurs
+
+Micro autorisé
+→ source MediaStream
+→ gain de voix / mute
+→ même sortie générale
+
+Sortie générale
+→ MediaStreamAudioDestinationNode
+→ MediaRecorder
+→ fichier téléchargeable
+```
+
+La transposition multiplie la vitesse du buffer par `2^(demi-tons / 12)`.
+La position de lecture tient compte de cette vitesse effective. Le scratch
+utilise le buffer normal ou un buffer dont les échantillons sont inversés.
+
+Le thème repose sur des variables CSS partagées `--dj-*`, définies pour le mode
+clair et redéfinies lorsque `data-theme="dark"` est présent sur la racine du
+document. Les composants enfants héritent de cette palette. Cela corrige les
+couleurs sombres autrefois imposées localement et les titres blancs en mode clair.
+
+### Vérifications réellement effectuées par l’assistant
+
+- `npm run build` dans `frontend-starter/` : **compilation réussie**.
+- `npm test` dans `frontend-starter/` : **9 fichiers de tests, 30 tests réussis**.
+- Tests du transport : lecture indépendante, crossfader, scratch inversé,
+  conservation de la position, boucles, égalisation et transposition.
+- Tests du micro et de l’enregistrement : branchement au master, mute, refus
+  d’autorisation, annulation d’une demande, sauvegarde des prises et nettoyage.
+- Tests de la collection : filtrage par style, sélection de la bonne platine,
+  désactivation pendant le chargement, récupération des WAV locaux et maintien
+  du chargement API pour les pistes importées.
+- Contrôle des six WAV : structure valide, durée et taille conformes au catalogue,
+  signal non silencieux et absence de saturation numérique des fichiers générés.
+- Contrôle HTTP local : les six fichiers audio répondent **200** avec la taille
+  attendue et un en-tête WAV valide.
+- Dans le navigateur : chargement/décodage des six pistes sur les platines ;
+  démarrage de la boucle House et progression de sa position de lecture.
+- Dans le navigateur : bascule clair/sombre, vérification des couleurs calculées,
+  inspection visuelle des deux thèmes et absence de débordement horizontal dans
+  la fenêtre testée.
+
+Les contrôles navigateur utilisent un serveur de test local isolé avec une
+connexion et une liste de pistes simulées, sans utiliser de compte réel ni
+modifier les données du backend. Les WAV et les composants audio testés sont
+ceux du projet. Les tests du micro et de MediaRecorder utilisent des objets
+simulés ; une validation avec un microphone physique et une écoute humaine de
+l’enregistrement final restent à faire par l’utilisateur.
+
+Captures conservées dans le dépôt :
+
+- [Mixage en mode clair](preuves/mixage-clair-2026-10-14.png).
+- [Mixage en mode sombre](preuves/mixage-sombre-2026-10-14.png).
+
+### Limites actuelles et décisions prises
+
+- La transposition modifie **aussi la vitesse** : le pitch shifting indépendant
+  n’est pas encore implémenté.
+- La boucle actuelle porte sur le morceau entier ; les boucles courtes calées
+  sur les mesures et les Hot Cues ne sont pas encore présents sur les platines.
+- Le CUE actuel revient au début ; il ne mémorise pas encore un point personnalisé.
+- Le classement des imports par style est local au navigateur, sans synchronisation
+  entre appareils ni stockage du genre dans l’API des pistes.
+- Les recherches et filtres des pistes importées portent sur la page serveur
+  actuellement chargée ; la collection de six démonstrations se filtre entièrement.
+- Les prises d’enregistrement restent temporaires dans la page : il faut les
+  télécharger avant de quitter le studio. Elles ne sont pas envoyées au serveur.
+- Le format d’enregistrement dépend des formats pris en charge par le navigateur
+  (WebM/Opus, OGG ou M4A selon la compatibilité) ; aucun export MP3 n’est promis.
+- Le micro nécessite un contexte compatible (HTTPS ou localhost) et une autorisation.
+  Le casque est conseillé puisque la voix est diffusée en direct dans le mix.
+- Le fond Butterchurn dépend de WebGL ; les autres modèles restent disponibles
+  en cas d’échec. Les préférences de réduction des animations sont respectées.
+- La compilation conserve les avertissements CommonJS de Butterchurn et de ses
+  presets ; ils ne font pas échouer le build.
+- Le backend et le contrat HTTP n’ont pas été modifiés pour ces évolutions.
+
+### Ce qui est prévu / proposé pour la suite
+
+Les éléments suivants constituent une **feuille de route proposée**. Ils ne sont
+pas encore réalisés et aucune date de livraison n’est annoncée.
+
+| Priorité proposée | Amélioration à réaliser | Résultat attendu |
+|---|---|---|
+| 1 | Synchronisation automatique du tempo A/B | Régler la vitesse d’une platine à partir du BPM de l’autre, puis travailler l’alignement des battements. |
+| 1 | Hot Cues et CUE personnalisé | Mémoriser plusieurs positions et revenir rapidement sur une introduction, un refrain ou un point de transition. |
+| 1 | Boucles musicales courtes | Choisir une longueur en battements/mesures sur chaque platine. |
+| 2 | Sauvegarde des réglages et des styles dans le compte | Retrouver ses paramètres entre sessions et appareils ; examiner le modèle de projet existant et les évolutions nécessaires du contrat API. |
+| 2 | Transposition sans changement de vitesse | Ajouter un moteur DSP adapté, par exemple via AudioWorklet, puis vérifier la qualité et la latence. |
+| 2 | Conservation des enregistrements | Ajouter une sauvegarde durable et un nom de prise choisi par l’utilisateur. |
+| 3 | Effets et contrôle des niveaux | Réverbération, délai, filtres supplémentaires, vumètres et protection contre la saturation du mix. |
+| 3 | Recherche globale et collection étendue | Rechercher sur toutes les pistes importées et compléter les boucles originales par d’autres styles. |
+
+Avant toute évolution serveur, le contrat HTTP et les consignes backend devront
+être examinés. Cette liste documente les prochaines pistes de travail, sans
+modifier le backend dans la mission présente.
+
+### Erreurs rencontrées et corrections apportées
+
+- Les couleurs du studio étaient fixées en sombre : remplacement par une palette
+  CSS commune qui suit le thème global, puis correction des titres héritant de
+  la couleur blanche des en-têtes.
+- L’export CommonJS de Butterchurn possède un niveau `default` supplémentaire :
+  adaptation du chargement et vérification du véritable format dans les tests.
+- Les erreurs d’autorisation micro ne se reconnaissent pas toujours avec
+  `instanceof Error` : lecture défensive du nom de l’erreur, vérifiée par un test.
+- Les tests du rendu devaient conserver la bonne fonction requestAnimationFrame
+  pour vérifier le redimensionnement de Butterchurn.
+- Le serveur de prévisualisation ne pouvait pas écouter dans le sandbox : il a
+  été lancé avec l’autorisation d’exécution locale, puis arrêté après les contrôles.
+
+### Principaux fichiers créés ou modifiés
+
+- `frontend-starter/src/app/components/app/app.ts`, `app.html`, `app.css`.
+- `frontend-starter/src/app/components/studio-page/` : TypeScript, HTML, CSS et tests.
+- `frontend-starter/src/app/components/dj-deck/` : commandes et affichage des platines.
+- `frontend-starter/src/app/components/mix-capture/` : commandes micro et enregistrement.
+- `frontend-starter/src/app/components/demo-library/` : collection par style et test.
+- `frontend-starter/src/app/components/tracks-page/` : import et classement par style.
+- `frontend-starter/src/app/shared/services/dj-audio.service.ts` et son test.
+- `frontend-starter/src/app/shared/services/mix-capture.service.ts` et son test.
+- `frontend-starter/src/app/shared/services/track-style.service.ts`.
+- `frontend-starter/src/app/shared/services/demo-track.service.ts`.
+- `frontend-starter/src/app/shared/services/track.service.ts` et son test.
+- `frontend-starter/src/app/shared/models/dj-deck.model.ts`, `demo-track.model.ts`,
+  `demo-tracks.json`.
+- `frontend-starter/src/styles.css` : palette commune du studio.
+- `frontend-starter/scripts/generate-demo-tracks.py`.
+- `frontend-starter/public/audio/demos/` : six WAV et notice d’origine.
+- `preuves/mixage-clair-2026-10-14.png`, `preuves/mixage-sombre-2026-10-14.png`.
+- `RAPPORT_IA_MODELE.md` : ce bilan et le lien vers l’état actuel.
+
+### Ce que le binôme doit pouvoir expliquer sans l’agent
+
+- La différence entre une piste importée depuis l’API et une boucle locale incluse.
+- La chaîne audio des deux platines, l’égaliseur et le crossfader.
+- Le principe du scratch inversé et les limites de la transposition actuelle.
+- Comment le microphone et l’enregistrement rejoignent la sortie générale.
+- Comment les variables CSS assurent le thème des composants imbriqués.
+- Ce qui persiste dans le navigateur, dans un fichier téléchargé ou dans le backend.
+- La différence entre tests avec objets simulés, vérifications navigateur et
+  validation réelle du micro et du résultat sonore.
+
+Ces points sont des objectifs de restitution, et non une attestation que le
+binôme a déjà réalisé personnellement toutes les vérifications.
+
+
+## Évolution du studio, du lecteur et de la collection — 14 octobre 2026
+
+### Demande et périmètre
+
+Réaliser les améliorations proposées : synchronisation du tempo, Hot Cues,
+sauvegarde des réglages et styles dans le compte, transposition indépendante.
+Harmoniser Pistes avec le studio, associer une couleur au style des imports,
+passer le lecteur en fond musical, proposer dix boucles par style existant et
+contrôler les parcours, la présentation et les points de sécurité concernés.
+
+### Nouveautés effectivement réalisées
+
+- **60 boucles originales** : dix variations pour chacun des six styles House,
+  Hip-hop, Afrobeat, Amapiano, Reggae et Blues. Le catalogue fournit le BPM et les
+  métadonnées ; les fichiers sont servis à la demande, sans téléchargement des
+  60 sons au démarrage. Environ 50 Mo d’assets WAV dans le dépôt.
+- **SYNC** : calcule la vitesse nécessaire pour suivre le BPM et la vitesse de
+  l’autre platine. Les BPM des démos sont connus ; celui d’un import est estimé
+  par analyse du signal et reste modifiable. La vitesse est bornée entre 0,5 et 2.
+- **Quatre Hot Cues par platine** : premier clic pour mémoriser la position,
+  clic suivant pour y revenir, bouton de suppression pour libérer le repère.
+- **Tonalité indépendante** : SoundTouch AudioWorklet reçoit le tempo du buffer
+  et applique la transposition en demi-tons indépendamment de cette vitesse.
+  Le processeur est fourni localement par le build. En cas d’indisponibilité,
+  la lecture reste possible et la commande de transposition est désactivée.
+  Le scratch contourne le traitement de tonalité pour conserver une manipulation
+  immédiate ; la lecture normale repasse ensuite dans le moteur DSP.
+- **Sauvegarde dans le compte** : réutilisation de `POST /api/projects` et
+  `GET /api/projects`, sans modifier le backend. Un snapshot versionné est placé
+  dans `settings.effects` ; il conserve les deux sélections, les BPM, les Hot Cues,
+  les volumes, la vitesse, la tonalité, l’EQ, la position, les boucles, le master,
+  le crossfader et les styles. Les prises audio et les réglages du micro ne sont
+  pas enregistrés dans le projet.
+- **Restauration** : valeurs numériques bornées, chargement par ID de piste,
+  arrêt des anciennes lectures et restauration sans activation du micro, de
+  l’enregistrement ou de la lecture. Les sauvegardes sont listées depuis Mixage.
+- **Styles des imports** : accent de couleur adapté au genre sélectionné ; cache
+  isolé par compte et migration des anciennes préférences du navigateur. Une
+  sauvegarde de mix permet de transférer ces préférences via le compte.
+- **Pistes et Lecture** : palette commune clair/sombre, contrôles harmonisés,
+  visualiseur fixe en arrière-plan de la page Lecture et modèles/presets modifiables.
+- **Téléphone** : correction du menu qui débordait horizontalement ; contrôle
+  navigateur à 390 px après correction, sans débordement horizontal constaté.
+
+### Sécurité : corrections et limites
+
+Le JWT est maintenant limité à l’API du même site. Il n’est plus ajouté aux
+WAV locaux, au worklet ni aux requêtes vers un domaine tiers. Les identifiants
+dans les URL sont encodés, les styles validés et les données restaurées bornées.
+Les snapshots n’incluent aucun secret ni token. Les sélections locales invalides
+sont gérées sans faire échouer la page Lecture.
+
+Les dépendances frontend ont été mises à jour et Angular est aligné sur 22.2.2.
+L’installation du verrou final rapporte **0 vulnérabilité npm connue** côté
+frontend. Cela ne signifie pas que l’application entière est exempte de risque.
+
+L’audit backend en lecture seule rapporte **deux vulnérabilités connues** :
+`multer` (modérée) et `proxy-addr` (critique). Les consignes interdisent de modifier
+le backend dans une mission frontend ; ces dépendances restent donc à corriger.
+La politique CORS, la limitation des tentatives de connexion, la validation des
+snapshots côté serveur et la stratégie de stockage des JWT restent aussi à
+renforcer pour la production. Le détail figure dans [SECURITE_MIXAGE.md](SECURITE_MIXAGE.md).
+
+### Vérifications effectuées
+
+- Compilation Angular : réussie.
+- Frontend : **11 fichiers, 36 tests réussis**.
+- Backend, tests existants sans MongoDB réel : **8 tests réussis** ; refus de JWT
+  absent/invalide, contrôles d’upload et refus d’accès à une piste d’un autre compte.
+- Les **60 WAV** ont une structure valide, un signal non silencieux, aucune
+  saturation numérique dans les fichiers et une taille conforme au catalogue.
+- Requêtes HTTP locales : **60 WAV et le processeur AudioWorklet répondent 200**.
+- Navigateur : attribution du style Reggae à une piste simulant un import et
+  changement de l’accent visuel ; ouverture et lecture dans le lecteur avec fond.
+- Navigateur : worklet chargé, commande de transposition active, lecture en cours,
+  synchronisation House/Hip-hop à environ 71 %, mémorisation d’un Hot Cue,
+  sauvegarde puis restauration de la tonalité et du repère.
+- Contrôles navigateur réalisés sur une API isolée simulant une piste importée et
+  les projets en mémoire : **pas de validation de la persistance MongoDB réelle**.
+- Tests unitaires supplémentaires : token absent des ressources et domaines tiers,
+  séparation des styles entre comptes, corps du snapshot et restauration valide,
+  routage vers le worklet et maintien de la vitesse lors de la transposition.
+
+Preuves : [lecteur en arrière-plan](preuves/lecteur-background-2026-10-14.png) et
+[studio enrichi](preuves/mixage-evolution-2026-10-14.png).
+
+### Prochaines améliorations non encore réalisées
+
+- Alignement de phase des battements : SYNC ajuste le tempo, sans beatmatching
+  automatique précis ; l’estimation BPM peut être incorrecte et doit être contrôlée.
+- Boucles courtes calées sur les mesures, vumètres et limiteur de saturation.
+- Sauvegarde automatique des styles dans les métadonnées des pistes : actuellement
+  ils sont synchronisés avec les snapshots de projets sur action de l’utilisateur.
+- Sauvegarde serveur des prises d’enregistrement et effets additionnels.
+- Mise à jour des dépendances backend et durcissement serveur avant déploiement.
+- Validation avec plusieurs comptes réels, microphone physique et écoute humaine
+  pour apprécier la qualité du time stretching et de la transposition sur divers sons.
+
+### Fichiers principalement concernés par cette évolution
+
+- Composants `dj-deck`, `mix-account`, `studio-page`, `tracks-page`, `demo-library`, `app`.
+- Services `dj-audio`, `track-style`, `project`, `track` et leurs tests concernés.
+- Intercepteur d’authentification et test ; modèles de snapshot et projet.
+- Script de génération, catalogue JSON, 60 fichiers WAV et notice d’origine.
+- `package.json`, verrou npm et `angular.json` pour le processeur local.
+- `API_CONTRACT.md` : format du snapshot dans le champ `effects` existant.
+- `SECURITE_MIXAGE.md`, preuves et présent rapport.
+
+Le binôme doit pouvoir distinguer la synchronisation de tempo de l’alignement des
+battements, expliquer la chaîne DSP, le snapshot de projet, les préférences par
+compte, et présenter les limites d’un contrôle de sécurité ciblé.
+
+
+## Transformation MOST VIBE — 14 octobre 2026
+
+### Demande et autorisation
+
+Le texte fourni par l’utilisateur demande de transformer le projet existant en
+mini réseau social musical MOST VIBE, en conservant les outils audio et les données.
+Il précise l’identité azur/violet, la découverte publique, les publications,
+les amis, la messagerie, les permissions serveur, la révocation et les crédits.
+Cette demande autorise les modifications nécessaires de l’API et du backend,
+malgré la consigne générale des missions frontend antérieures. Aucun secret
+`.env` ni jeu de données réel n’a été modifié pour les tests.
+
+### Réalisation
+
+- Intégration de l’image fournie, initiales MV, palette demandée, navigation
+  verticale et lecteur persistant ; conservation du thème sombre en option.
+- Pages Accueil/Explorer sans connexion, recherche publique et albums publics.
+- Publications privées par défaut ; choix public/amis, consultation et révocation
+  des destinataires, métadonnées et styles persistés dans les pistes.
+- Modèles Mongoose supplémentaires pour amitiés, blocages, messages, notifications,
+  collections, réactions et signalements. Pas de tableau fictif tenant lieu de DB.
+- Routes de droits, messagerie, likes/favoris, albums/playlists, compte et modération.
+- Historique de messages autorisé aux deux amis uniquement ; envoi de pistes
+  appartenant à l’émetteur, accès attribué sans publication et carte interrompue
+  après révocation. Les nouvelles lectures vérifient l’accès actuel.
+- Sources et crédits de remix collectés pendant l’enregistrement et calculés
+  côté serveur après vérification de l’autorisation de chaque source. Les crédits
+  et sources ne peuvent pas être retirés par un PATCH de fichier.
+- Sauvegarde/reprise des brouillons, partage avec des amis et révocation ;
+  conservation des permissions distinctes sur les fichiers source.
+- Enregistrement du mix vers la bibliothèque privée, puis choix de publication.
+- Paramètres persistants : profil, bio/avatar, notifications, profil découvrable,
+  blocages et suppression après vérification du mot de passe.
+- Administration de contenus publics, signalements et suspension de comptes ;
+  le rôle est relu en base et ne permet pas de lire des conversations/fichiers privés.
+- MP3/WAV/OGG/M4A/WebM, clips MP4/WebM et images PNG/JPEG/WebP : types et signatures
+  vérifiés, durée audio extraite côté serveur, noms internes contrôlés, 25 Mo maximum.
+- Mise à jour des dépendances backend vulnérables, Helmet, limites de requêtes,
+  CORS ciblé et refus du secret JWT de développement en production.
+- Documents de contrat et de livraison ; préparation Docker/Nginx avec volume
+  persistant et guide de configuration, sans annonce de mise en ligne réalisée.
+
+### Vérifications et preuves
+
+Dernier contrôle de cette livraison : **42 tests frontend (13 fichiers) et
+16 tests backend réussis**, build Angular réussi. Les deux avertissements
+CommonJS de Butterchurn/presets concernent l’optimisation du bundle.
+Les captures des sections antérieures documentent le studio précédent ;
+elles ne prouvent pas le rendu final MOST VIBE.
+
+Les tests frontend conservent les contrôles audio précédents et ajoutent la
+reprise d’un favori ou d’un remix après connexion depuis l’accueil public.
+Une autorisation de remix retirée est revérifiée avant d’ouvrir le studio.
+Le lecteur efface le média précédent lors du chargement suivant, y compris
+en cas d’accès refusé, et ignore les téléchargements obsolètes. Les tests backend
+utilisent trois comptes fictifs et MongoDB éphémère, sans l’URI du `.env` réel.
+Ils couvrent notamment les accès privés par lien direct, publication par un
+non-propriétaire refusée, invitations acceptées/refusées par le destinataire,
+messages réservés aux amis, attribution et révocation d’un accès musical,
+crédits immuables sur deux générations de remixes, absence d’activité privée,
+blocages, collections/favoris/notifications, projets, administration et rejet
+d’un texte déguisé en WAV. Les anciens tests de l’API restent présents.
+
+Les audits npm frontend/backend indiquent zéro vulnérabilité connue au contrôle.
+La configuration Compose a été validée avec des valeurs fictives ; aucun site
+n’a été déployé. Les contrastes principaux sont vérifiés numériquement : texte
+`#18324F` sur blanc 13,06:1 ; texte secondaire sur fond clair 4,51:1 ; bouton azur
+foncé/texte blanc 5,57:1. L’azur principal pur est réservé aux usages adaptés.
+
+**Limite explicite :** l’ouverture de la prévisualisation locale a été refusée
+par la sécurité du navigateur (autorisation déclinée). Aucun autre navigateur,
+port de contournement ou automatisation équivalente n’a été utilisé. Le rendu
+visuel final et le micro/vidéo sur périphérique réel ne sont donc pas attestés.
+
+### Erreurs et corrections
+
+- Les fonctionnalités sociales exigent de nouvelles routes : le contrat API
+  a été complété avec authentification, corps, réponses et erreurs.
+- Limitation des champs de création de projets pour empêcher un partage injecté
+  dans le corps ; droits revérifiés après blocage ou retrait d’amitié.
+- Validation binaire ajoutée après le filtre MIME Multer, avec nettoyage des
+  fichiers temporaires si la validation ou l’écriture échoue.
+- Retour après connexion limité aux chemins internes autorisés, avec reprise
+  d’une action différée ; suppression des identifiants démo préremplis.
+- Contrôle du rôle administrateur côté DB et refus des modifications du rôle
+  depuis les préférences. Le premier rôle est attribué par script opérateur.
+- Annulation des réponses de recherche/conversation obsolètes pour éviter
+  de mélanger les résultats ou de montrer un ancien fil sous un autre ami.
+- Recherche des pistes à envoyer effectuée côté serveur dans toute la
+  bibliothèque personnelle, avant pagination ; recherche littérale et isolée
+  entre comptes vérifiée dans les tests HTTP.
+- Affichage de toute la chaîne de contributeurs dans les fiches, les lecteurs
+  et les cartes partagées ; boutons/textes ajustés pour leur contraste.
+
+### Services à configurer et contrôles restants
+
+Configurer MongoDB réel, domaine/HTTPS, CORS, secret JWT, premier administrateur,
+volume de fichiers et sauvegardes. Valider les conteneurs et le déploiement réel,
+les navigateurs desktop/mobile, les codecs vidéo et le micro physique. Les
+notifications sont en application avec polling ; ni SMTP, push hors application
+ni présence instantanée ne sont annoncés. Les crédits concernent les sources
+référencées ; l’application ne détecte pas automatiquement les droits juridiques
+d’un fichier créé ailleurs. Un fichier déjà téléchargé ne peut pas être repris.
+
+Le bilan complet figure dans [MOST_VIBE.md](MOST_VIBE.md) et les étapes de mise
+en ligne dans [deployment/README.md](deployment/README.md). Le binôme doit expliquer
+les ACL, leur révocation, les crédits dérivés par le serveur, la séparation des
+privilèges d’administration et la différence entre tests DB isolés et production.

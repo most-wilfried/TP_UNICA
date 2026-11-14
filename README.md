@@ -1,3 +1,7 @@
+# MOST VIBE
+
+Le projet conserve son historique pédagogique et ses outils audio. La transformation en réseau social musical est documentée dans [MOST_VIBE.md](MOST_VIBE.md), le [contrat API](API_CONTRACT.md) et le [guide de mise en ligne](deployment/README.md). Le site n’est pas encore publié.
+
 # Guitar Practice Cloud — package étudiant
 
 Ce dépôt contient uniquement les ressources nécessaires aux trois TP :
