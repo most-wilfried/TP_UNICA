@@ -25,15 +25,17 @@ export class AuthService {
   }
 
   profile(): Observable<User> {
+    const requestedToken=this.token();
     return this.http
       .get<User>('/api/users/me')
-      .pipe(tap((user) => this.currentUser.set(user)));
+      .pipe(tap((user) => {if(requestedToken&&this.token()===requestedToken)this.currentUser.set(user);}));
   }
 
   update(name: string): Observable<User> {
+    const requestedToken=this.token();
     return this.http
       .put<User>('/api/users/me', { name })
-      .pipe(tap((user) => this.currentUser.set(user)));
+      .pipe(tap((user) => {if(requestedToken&&this.token()===requestedToken)this.currentUser.set(user);}));
   }
 
   logout(): void {

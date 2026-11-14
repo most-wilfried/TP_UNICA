@@ -15,6 +15,11 @@
                             {
                                 "glob": "**/*",
                                 "input": "public"
+                            },
+                            {
+                                "glob": "soundtouch-processor.js",
+                                "input": "node_modules/@soundtouchjs/audio-worklet/.dist",
+                                "output": "audio/worklets"
                             }
                         ],
                         "styles": [

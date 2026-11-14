@@ -1,0 +1,33 @@
+<article class="deck" [class.deck-b]="id() === 'B'">
+  <header><span class="badge">{{ id() }}</span><div><small>PLATINE {{ id() }}</small><h2>{{ state().title || 'Charger un morceau' }}</h2></div><span class="status">{{ state().loading ? 'Chargement…' : state().scratching ? 'SCRATCH' : state().playing ? 'EN LECTURE' : 'PRÊTE' }}</span></header>
+  <div class="display"><span>{{ time(state().position) }}</span><span>−{{ time(state().duration - state().position) }}</span></div>
+  <input class="timeline" type="range" min="0" [max]="state().duration" step="0.01" [value]="state().position" (input)="engine.seek(id(), number($event))" [disabled]="!state().title || state().loading" [attr.aria-label]="'Position platine ' + id()" />
+  <div class="jog-area">
+    <button class="vinyl" type="button" [class.scratching]="state().scratching" [disabled]="!state().title || state().loading" (pointerdown)="startScratch($event)" (pointermove)="moveScratch($event)" (pointerup)="endScratch()" (pointercancel)="endScratch()" (lostpointercapture)="endScratch()" (keydown)="keyboardScratch($event)" (keyup)="endKeyboard($event)" (blur)="blur()" [attr.aria-label]="'Scratch platine ' + id() + ' : glissez verticalement ou utilisez les flèches gauche et droite'">
+      <span class="record" [style.transform]="'rotate(' + state().position * 180 + 'deg)'" ><span class="label"><b>{{ id() }}</b><small>VINYL CONTROL</small></span><span class="needle"></span></span>
+    </button>
+  </div>
+  <p class="hint">Scratch : glissez le disque ↑↓ · clavier ← →</p>
+  <div class="transport"><button type="button" (click)="engine.stop(id())" [disabled]="!state().title || state().loading">CUE</button><button class="play" type="button" (click)="play()" [disabled]="!state().title || state().loading || state().scratching">{{ state().playing ? '❚❚ Pause' : '▶ Lecture' }}</button><button type="button" (click)="engine.loop(id())" [attr.aria-pressed]="state().loop" [disabled]="!state().title || state().loading">Boucle</button></div>
+  <div class="settings"><label>Tempo · {{ (state().rate * 100).toFixed(0) }} %<input type="range" min="0.5" max="2" step="0.01" [value]="state().rate" (input)="engine.rate(id(), number($event))" /></label><label>Volume<input type="range" min="0" max="1" step="0.01" [value]="state().volume" (input)="engine.volume(id(), number($event))" /></label></div>
+  <div class="beat-controls"><label>BPM du morceau<input type="number" min="40" max="240" [value]="state().bpm" (change)="engine.setBpm(id(), number($event))" /></label><button type="button" (click)="engine.sync(id())" [disabled]="!state().title">SYNC {{ id() === 'A' ? '→ B' : '→ A' }}</button></div>
+  <div class="hot-cues" aria-label="Repères rapides">
+    @for (cue of state().cues; track $index) {
+      <div><button type="button" (click)="engine.cue(id(), $index)" [disabled]="!state().title || state().loading">{{ cue === null ? '+ Cue ' + ($index + 1) : 'Cue ' + ($index + 1) + ' · ' + time(cue) }}</button>
+      @if (cue !== null) { <button type="button" class="clear-cue" (click)="engine.clearCue(id(), $index)" [attr.aria-label]="'Effacer Cue ' + ($index + 1)">×</button> }</div>
+    }
+  </div>
+  <fieldset class="tone-controls">
+    <legend>Tonalité & égaliseur</legend>
+    <label>Transposition · {{ state().semitones > 0 ? '+' : '' }}{{ state().semitones }} demi-tons
+      <input type="range" min="-12" max="12" step="1" [value]="state().semitones" (input)="engine.transpose(id(), number($event))" [disabled]="!engine.dspReady()" />
+    </label>
+    <p class="tone-note">La tonalité est indépendante de la vitesse grâce au moteur audio.</p>
+    <div class="eq-bands">
+      <label>Graves · {{ state().bass }} dB<input type="range" min="-24" max="12" step="1" [value]="state().bass" (input)="engine.eq(id(), 'bass', number($event))" /></label>
+      <label>Médiums · {{ state().mid }} dB<input type="range" min="-24" max="12" step="1" [value]="state().mid" (input)="engine.eq(id(), 'mid', number($event))" /></label>
+      <label>Aigus · {{ state().treble }} dB<input type="range" min="-24" max="12" step="1" [value]="state().treble" (input)="engine.eq(id(), 'treble', number($event))" /></label>
+    </div>
+    <button type="button" (click)="engine.resetTone(id())">Réinitialiser la tonalité / EQ</button>
+  </fieldset>
+</article>

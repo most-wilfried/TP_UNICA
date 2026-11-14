@@ -1,0 +1,41 @@
+<section #studioPanel class="studio">
+  <canvas #butterchurnCanvas class="backdrop milkdrop-background" [hidden]="!background() || visualizerMode() !== 'butterchurn'" aria-hidden="true"></canvas>
+  <canvas #backdrop class="backdrop" [hidden]="!background() || visualizerMode() === 'butterchurn'" aria-hidden="true"></canvas>
+  <div class="content">
+    <header class="heading"><div><p class="eyebrow">STUDIO / MIXAGE</p><h1>Deux platines. Votre mix.</h1><p>Chargez vos sons, lancez les platines et faites entrer le prochain morceau.</p></div><button type="button" (click)="background.set(!background())" [attr.aria-pressed]="background()">Effets musicaux {{ background() ? 'activé' : 'désactivé' }}</button></header>
+    <section class="background-controls" aria-label="Choisir la visualisation en arrière-plan">
+      <label>Modèle du fond
+        <select [value]="visualizerMode()" (change)="changeVisualizerMode($event)">
+          <option value="butterchurn">Butterchurn · MilkDrop</option>
+          <option value="bars">Barres énergie</option>
+          <option value="mirror">Miroir symétrique</option>
+          <option value="wave">Onde fluide</option>
+          <option value="circle">Cercle radial</option>
+        </select>
+      </label>
+      @if (visualizerMode() === 'butterchurn') {
+        <label class="preset-picker">Preset Butterchurn
+          <select [value]="selectedPreset()" (change)="changePreset($event)" [disabled]="!presetNames().length">
+            @if (!presetNames().length) { <option value="">Chargez un morceau pour accéder aux presets</option> }
+            @for (name of presetNames(); track name) { <option [value]="name">{{ name }}</option> }
+          </select>
+        </label>
+        <button type="button" (click)="nextPreset()" [disabled]="!presetNames().length">Preset suivant</button>
+      }
+    </section>
+    @if (visualizerError()) { <p class="error" role="alert">{{ visualizerError() }}</p> }
+    @if (engine.dspError()) { <p class="error" role="alert">{{ engine.dspError() }}</p> }
+    @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+    <div class="console">
+      <app-dj-deck id="A" />
+      <section class="mixer" aria-label="Table de mixage"><p class="eyebrow">MIXER</p><h2>A + B</h2><div class="light">● MASTER</div><label>Sortie générale<input type="range" min="0" max="1" step="0.01" [value]="engine.master()" (input)="engine.setMaster(+value($event))" /></label><div class="crossfade"><label>Crossfader<input type="range" min="-1" max="1" step="0.01" [value]="engine.crossfade()" (input)="engine.mix(+value($event))" /></label><div class="ends"><span>A</span><span>B</span></div><button type="button" (click)="engine.mix(0)">Centrer</button></div><p class="note">À gauche : A<br />Au centre : A + B<br />À droite : B</p><p class="note">SYNC ajuste le tempo selon le BPM renseigné. La tonalité reste indépendante.</p><app-mix-capture [sources]="selectedTracks()" /></section>
+      <app-dj-deck id="B" />
+    </div>
+    <app-mix-account [tracks]="selectedTracks()" (restore)="restoreMix($event)" />
+    <app-demo-library [mixing]="true" [busyA]="engine.decks().A.loading" [busyB]="engine.decks().B.loading" (chooseDeck)="assign($event.track, $event.deck)" />
+    <section class="library"><div class="library-heading"><div><p class="eyebrow">SÉLECTION MUSICALE</p><h2>Votre collection</h2></div><a routerLink="/tracks">+ Ajouter des sons</a></div><div class="filters"><label>Rechercher sur cette page<input type="search" placeholder="Titre du morceau…" [value]="query()" (input)="query.set(value($event))" /></label><label>Style musical<select [value]="genre()" (change)="genre.set(value($event))"><option value="">Tous les styles</option>@for (style of styles.styles; track style) { <option [value]="style">{{ style }}</option> }</select></label></div>
+    @if (loading()) { <p role="status">Chargement…</p> }
+    @for (track of filtered(); track track.id) { <div class="track"><div><b>{{ track.title }}</b><small>{{ styles.get(track.id) }} · {{ track.originalName }}</small></div><div class="actions"><button type="button" (click)="assign(track, 'A')" [disabled]="engine.decks().A.loading">Charger A</button><button type="button" (click)="assign(track, 'B')" [disabled]="engine.decks().B.loading">Charger B</button></div></div> } @empty { @if (!loading()) { <p>Aucun morceau sur cette page pour cette sélection. Ajoutez des sons depuis la bibliothèque.</p> } }
+    <div class="pager"><button type="button" (click)="load(page() - 1)" [disabled]="loading() || page() <= 1">Précédent</button><span>{{ page() }} / {{ pages() }}</span><button type="button" (click)="load(page() + 1)" [disabled]="loading() || page() >= pages()">Suivant</button></div></section>
+  </div>
+</section>

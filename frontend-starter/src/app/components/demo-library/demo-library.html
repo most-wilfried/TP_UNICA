@@ -1,0 +1,23 @@
+<section class="demo-library" aria-label="Pistes originales par style musical">
+  <div class="demo-heading"><div><p class="eyebrow">PRÊTES À MIXER</p><h2>Pistes par style musical</h2></div><span>{{ demos.tracks.length }} boucles originales · 10 par style</span></div>
+  <p>Choisissez un style et chargez une boucle instrumentale. Ces pistes sont incluses dans l’application, sans import nécessaire.</p>
+  <div class="style-tabs" aria-label="Filtrer les boucles par style">
+    <button type="button" (click)="selectedStyle.set('')" [attr.aria-pressed]="selectedStyle() === ''">Tous les styles</button>
+    @for (style of styles; track style) { <button type="button" (click)="selectedStyle.set(style)" [attr.aria-pressed]="selectedStyle() === style">{{ style }}</button> }
+  </div>
+  <div class="demo-grid">
+    @for (track of filtered(); track track.id) {
+      <article class="demo-track"><span class="style-badge">{{ track.style }}</span><h3>{{ track.title }}</h3><p>{{ track.bpm }} BPM · {{ track.duration.toFixed(0) }} s · WAV</p>
+        <div class="demo-actions">
+          @if (mixing()) {
+            <button type="button" (click)="chooseDeck.emit({ track, deck: 'A' })" [disabled]="busyA()" [attr.aria-label]="'Charger ' + track.title + ' sur A'">Charger A</button>
+            <button type="button" (click)="chooseDeck.emit({ track, deck: 'B' })" [disabled]="busyB()" [attr.aria-label]="'Charger ' + track.title + ' sur B'">Charger B</button>
+          } @else {
+            <button type="button" (click)="listen.emit(track)">▶ Écouter</button><button type="button" (click)="mix.emit(track)">Mixer</button>
+          }
+        </div>
+      </article>
+    }
+  </div>
+  <p class="demo-note">Activez « Boucle » sur la platine pour prolonger le morceau. Les styles de vos propres imports restent modifiables dans la bibliothèque.</p>
+</section>

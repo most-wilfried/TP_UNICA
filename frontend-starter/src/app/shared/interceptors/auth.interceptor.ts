@@ -9,15 +9,16 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
   const auth = inject(AuthService);
   const router = inject(Router);
   const token = auth.token();
-  const isPublicRequest = request.url.endsWith('/api/auth/login') ||
-    request.url.endsWith('/api/auth/register') || request.url.endsWith('/api/health');
-  const authenticatedRequest = token && !isPublicRequest
+  const url = new URL(request.url, window.location.origin);
+  const isApiRequest = url.origin === window.location.origin && url.pathname.startsWith('/api/');
+  const isPublicRequest = ['/api/auth/login', '/api/auth/register', '/api/health'].includes(url.pathname);
+  const authenticatedRequest = token && isApiRequest && !isPublicRequest
     ? request.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
     : request;
 
   return next(authenticatedRequest).pipe(
     catchError((error: { status?: number }) => {
-      if (error.status === 401 && !isPublicRequest) {
+      if (error.status === 401 && token && auth.token()===token && isApiRequest && !isPublicRequest) {
         auth.logout();
         void router.navigateByUrl('/login');
       }

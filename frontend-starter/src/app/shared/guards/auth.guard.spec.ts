@@ -21,10 +21,10 @@ describe('authGuard', () => {
 
     const result = TestBed.runInInjectionContext(() => authGuard(
       {} as never,
-      {} as never,
+      {url:'/studio'} as never,
     ));
 
     expect(result).toBeInstanceOf(UrlTree);
-    expect(router.serializeUrl(result as UrlTree)).toBe('/login');
+    expect(router.serializeUrl(result as UrlTree)).toBe('/login?returnTo=%2Fstudio');
   });
 });

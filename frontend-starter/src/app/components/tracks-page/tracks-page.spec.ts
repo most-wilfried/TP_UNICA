@@ -1,3 +1,4 @@
+import { provideHttpClient } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpEvent, HttpEventType } from '@angular/common/http';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -46,7 +47,7 @@ describe('TracksPageComponent', () => {
     };
     await TestBed.configureTestingModule({
       imports: [TracksPageComponent],
-      providers: [
+      providers: [provideHttpClient(),
         { provide: TrackService, useValue: service },
         { provide: MatSnackBar, useValue: { open: vi.fn() } },
       ],
@@ -107,7 +108,7 @@ describe('TracksPageComponent', () => {
     expect(engineMock.loadPreset).toHaveBeenLastCalledWith({}, 1.5);
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.waveform').hidden).toBe(true);
-    expect(fixture.nativeElement.querySelector('option[value="bars"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('option[value="bars"]')).toBeTruthy();
     expect(canvas.width).toBe(1920);
     expect(canvas.height).toBe(1080);
     expect(engineMock.setRendererSize).toHaveBeenLastCalledWith(1920, 1080);

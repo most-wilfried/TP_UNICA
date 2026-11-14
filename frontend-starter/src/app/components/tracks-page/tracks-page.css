@@ -10,3 +10,22 @@
 .visualizer-panel:fullscreen .butterchurn-canvas,
 .visualizer-panel:fullscreen .waveform { flex: 1; min-height: 0; height: auto; cursor: default; }
 .visualizer-panel:fullscreen .preset-picker { max-width: 100%; }
+
+.style-note{font-size:.8rem;color:var(--muted)}.track-style{display:flex;align-items:center;gap:8px;margin:8px 0;font-size:.8rem}.track-style select{max-width:180px}
+
+.tracks-view{color:var(--dj-text);background:var(--dj-background);padding:24px;border-radius:18px}.tracks-view .card{background:var(--dj-solid-panel);border-color:var(--dj-border);color:var(--dj-text)}.tracks-view label,.tracks-view b{color:var(--dj-text)}.tracks-view input,.tracks-view select{background:var(--dj-control);color:var(--dj-text);border-color:var(--dj-border)}.tracks-view small,.style-note{color:var(--dj-muted)}.tracks-view .track:hover{background:var(--dj-hover)}.tracks-view .secondary{background:var(--dj-control);color:var(--dj-accent-a);border-color:var(--dj-border)}
+.view-player{position:relative;isolation:isolate;min-height:calc(100vh - 70px);border-radius:0;padding:32px clamp(16px,3vw,48px)}.view-player .hero{background:var(--dj-panel);color:var(--dj-text);border-color:var(--dj-border);box-shadow:none}.view-player .hero p,.view-player .hero .eyebrow{color:var(--dj-muted)}.view-player .hero::after{display:none}.view-player .library-card{background:var(--dj-panel);backdrop-filter:blur(8px)}.view-player .audio-workstation{position:static;background:transparent;border:0}.view-player .visualizer-panel{position:static;color:var(--dj-text);background:var(--dj-panel);border:1px solid var(--dj-border)}.view-player .butterchurn-canvas,.view-player .waveform{position:absolute;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none;border:0;border-radius:0;opacity:var(--dj-background-opacity)}.view-player .visualizer-panel:fullscreen{position:relative;isolation:isolate;background:var(--dj-background)}.view-player .visualizer-panel:fullscreen canvas{position:absolute;height:100%;width:100%}.view-player .visualizer-actions button{background:var(--dj-control);color:var(--dj-text);border:1px solid var(--dj-border)}.track-style select{border-left:4px solid var(--dj-accent-a)}
+@media(max-width:650px){.tracks-view{padding:16px}.view-player{padding:16px}}
+
+.track{border-left:4px solid var(--track-accent,var(--dj-accent-a));padding-left:14px}.track-style select{border-left-color:var(--track-accent,var(--dj-accent-a))}
+
+.tracks-view .hero{background:var(--dj-panel);color:var(--dj-text);border-color:var(--dj-border);box-shadow:none}.tracks-view .hero p,.tracks-view .hero .eyebrow{color:var(--dj-muted)}.tracks-view .hero::after{display:none}.view-player .butterchurn-canvas,.view-player .waveform{position:fixed;height:100vh}
+
+.view-player .butterchurn-canvas { filter: brightness(.65); }
+
+/* A filter on the parent traps fixed canvases inside the card. */
+.view-player .library-card { backdrop-filter: none; }
+
+.tracks-view { --primary: var(--dj-accent-a); --primary-strong: var(--dj-accent-a); --text: var(--dj-text); --muted: var(--dj-muted); --border: var(--dj-border); --surface: var(--dj-panel); --surface-soft: var(--dj-control); }
+
+.track{flex-wrap:wrap}.track>div:first-child{flex:1;min-width:180px}

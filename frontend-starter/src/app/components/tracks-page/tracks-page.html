@@ -1,15 +1,23 @@
 <section [class]="'tracks-view view-' + section()">
   <div class="hero">
-    <p class="eyebrow">MA BIBLIOTHÈQUE</p>
-    <h1>Backing tracks</h1>
+    <p class="eyebrow">{{ section() === 'library' ? 'MA BIBLIOTHÈQUE' : 'LECTEUR AUDIO' }}</p>
+    <h1>{{ section() === 'library' ? 'Mes pistes musicales' : 'Écouter. Explorer. Jouer.' }}</h1>
     <p>Importez, retrouvez et écoutez vos morceaux de travail.</p>
   </div>
+
+  @if (section() === 'library') {
+    <app-demo-library (listen)="openWorkspace($event, 'player')" (mix)="openWorkspace($event, 'studio')" />
+  }
 
   <div class="grid">
     <article class="card library-only">
       <h2>Importer</h2>
       <label>Titre<input [formControl]="title" [disabled]="uploading()" /></label>
-      <label>Fichier audio<input #fileInput type="file" accept=".mp3,.wav,.ogg,.m4a,audio/*" (change)="choose($event)" [disabled]="uploading()" /></label>
+      <label>Style musical<select [formControl]="uploadStyle">
+        @for (style of styles.styles; track style) { <option [value]="style">{{ style }}</option> }
+      </select></label>
+      <p class="style-note">Les nouveaux fichiers sont privés par défaut. Leur style est sauvegardé dans votre bibliothèque.</p>
+      <label>Fichier multimédia<input #fileInput type="file" accept=".mp3,.wav,.ogg,.m4a,.webm,.mp4,.png,.jpg,.jpeg,.webp,audio/*,video/mp4,video/webm,image/png,image/jpeg,image/webp" (change)="choose($event)" [disabled]="uploading()" /></label>
       <button class="primary wide" type="button" (click)="upload()" [disabled]="!file || uploading()" [attr.aria-busy]="uploading()">
         {{ uploading() ? 'Envoi…' : 'Envoyer' }}
       </button>
@@ -56,22 +64,34 @@
           }
         </select>
       </label>
+      <label>Filtrer par style sur cette page
+        <select [value]="styleFilter()" (change)="changeStyleFilter($event)">
+          <option value="">Tous les styles</option>
+          @for (style of styles.styles; track style) { <option [value]="style">{{ style }}</option> }
+        </select>
+      </label>
       @for (track of filteredTracks(); track track.id) {
-        <div class="track">
+        <div class="track" [style.--track-accent]="styles.color(track.id)">
           <div>
             <b>{{ track.title }}</b>
+            <label class="track-style">Style musical
+              <select [value]="styles.get(track.id)" (change)="classify(track, $event)" [attr.aria-label]="'Style de ' + track.title">
+                @for (style of styles.styles; track style) { <option [value]="style">{{ style }}</option> }
+              </select>
+            </label>
             <small>{{ track.originalName }} · {{ formatSize(track.size) }} · {{ track.createdAt.slice(0, 10) }}</small>
           </div>
           <div class="actions">
             <button class="icon-button" type="button" (click)="openWorkspace(track, 'player')" [attr.aria-label]="'Ouvrir le lecteur pour ' + track.title">▶</button>
-            <button class="secondary" type="button" (click)="openWorkspace(track, 'studio')">Studio</button>
+            <button class="secondary" type="button" (click)="openWorkspace(track, 'studio')" [disabled]="track.mimeType.startsWith('image/')">Studio</button>
             <button type="button" class="danger" (click)="remove(track)" [disabled]="deletingId() !== null">
               {{ deletingId() === track.id ? 'Suppression…' : 'Supprimer' }}
             </button>
           </div>
+          <app-publish-controls [track]="track" (updated)="updatePublication($event)" />
         </div>
       } @empty {
-        <p>{{ searchQuery() ? 'Aucune piste ne correspond à cette recherche sur la page.' : 'Aucune piste.' }}</p>
+        <p>{{ searchQuery() || styleFilter() ? 'Aucune piste ne correspond à cette recherche sur la page.' : 'Aucune piste.' }}</p>
       }
       <div class="pager">
         <button type="button" (click)="go(page() - 1)" [disabled]="page() === 1">Préc.</button>
@@ -80,11 +100,11 @@
       </div>
       @if (audioUrl()) {
         <section class="audio-workstation workspace-only" aria-label="Lecteur audio">
-          <p>Lecture en cours : <b>{{ playingTitle() }}</b></p>
+          <p>Lecture en cours : <b>{{ playingTitle() }}</b></p>@if(playingTrack()?.credits?.length){<p class="style-note">Remix par {{playingTrack()?.author||'le créateur'}} · À partir de la création de @for(credit of playingTrack()?.credits;track credit.userId){<span>{{credit.name}}{{$last?'':', '}}</span>}</p>}
           <section #visualizerPanel class="visualizer-panel" aria-label="Visualisation musicale">
           <div class="visualizer-heading">
             <span>Visualiseur en temps réel</span>
-            @if (section() === 'studio') {
+            @if (section() !== 'library') {
             <label>Modèle
               <select [value]="visualizerMode()" (change)="changeVisualizerMode($event)">
                 <option value="butterchurn">Butterchurn · MilkDrop</option>

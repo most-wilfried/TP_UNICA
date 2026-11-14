@@ -1,3 +1,7 @@
+import { MusicPlayerService } from '../../shared/services/music-player.service';
+import { PublishControlsComponent } from '../publish-controls/publish-controls';
+import { CommunityService } from '../../shared/services/community.service';
+import { DemoLibraryComponent } from '../demo-library/demo-library';
 import type { Visualizer } from 'butterchurn';
 import { Component, computed, ElementRef, inject, input, OnDestroy, OnInit, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
@@ -5,20 +9,23 @@ import { HttpEventType } from '@angular/common/http';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Track } from '../../shared/models/track.model';
+import { TrackStyleService } from '../../shared/services/track-style.service';
 import { TrackService } from '../../shared/services/track.service';
 
 @Component({
   selector: 'app-tracks-page',
-  imports: [ReactiveFormsModule, MatSnackBarModule],
+  imports: [PublishControlsComponent, DemoLibraryComponent, ReactiveFormsModule, MatSnackBarModule],
   templateUrl: './tracks-page.html',
   styleUrl: './tracks-page.css',
 })
 export class TracksPageComponent implements OnInit, OnDestroy {
   private static readonly maxFileSize = 25 * 1024 * 1024;
   private static readonly allowedTypes = new Set([
-    'audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/ogg', 'audio/mp4', 'audio/x-m4a',
+    'video/mp4','video/webm','image/png','image/jpeg','image/webp','audio/webm', 'audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/ogg', 'audio/mp4', 'audio/x-m4a',
   ]);
   private readonly service = inject(TrackService);
+  private readonly persistent = inject(MusicPlayerService);
+  private readonly community = inject(CommunityService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly router = inject(Router);
   private butterchurn?: Visualizer;
@@ -40,6 +47,9 @@ export class TracksPageComponent implements OnInit, OnDestroy {
   private animationFrameId?: number;
   private metronomeTimer?: ReturnType<typeof setInterval>;
 
+  readonly styles = inject(TrackStyleService);
+  readonly uploadStyle = new FormControl('Non classé', { nonNullable: true });
+  readonly styleFilter = signal('');
   readonly tracks = signal<Track[]>([]);
   readonly section = input<'library' | 'player' | 'studio'>('library');
   readonly searchQuery = signal('');
@@ -56,9 +66,9 @@ export class TracksPageComponent implements OnInit, OnDestroy {
   private readonly titleCollator = new Intl.Collator('fr', { sensitivity: 'base', numeric: true });
   readonly filteredTracks = computed(() => {
     const query = this.normalize(this.searchQuery());
-    const tracks = query
-      ? this.tracks().filter((track) => this.normalize(track.title).includes(query))
-      : [...this.tracks()];
+    const tracks = this.tracks().filter(track =>
+      (!query || this.normalize(track.title).includes(query)) &&
+      (!this.styleFilter() || this.styles.get(track.id) === this.styleFilter()));
     const order = this.sortOrder();
     return tracks.sort((a, b) => {
       const titleOrder = this.titleCollator.compare(a.title, b.title);
@@ -85,6 +95,7 @@ export class TracksPageComponent implements OnInit, OnDestroy {
   readonly success = signal('');
   readonly audioUrl = signal('');
   readonly playingTitle = signal('');
+  readonly playingTrack=signal<Track|null>(null);
   readonly currentTime = signal(0);
   readonly duration = signal(0);
   readonly isPlaying = signal(false);
@@ -122,10 +133,16 @@ export class TracksPageComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     if (this.section() === 'library') return;
     const saved = sessionStorage.getItem('gpc_selected_track');
-    if (saved) this.play(JSON.parse(saved) as Track);
+    if (saved) {
+      try {
+        const track: unknown = JSON.parse(saved);
+        if (track && typeof track === 'object' && 'id' in track && typeof track.id === 'string' && 'title' in track && typeof track.title === 'string') this.play(track as Track);
+      } catch (error) { console.error('[Lecteur] Sélection locale invalide', error); }
+    }
   }
 
   openWorkspace(track: Track, section: 'player' | 'studio'): void {
+    if(section==='player'&&(track.mimeType.startsWith('image/')||track.mimeType.startsWith('video/'))){this.persistent.play(track);return;}
     sessionStorage.setItem('gpc_selected_track', JSON.stringify(track));
     void this.router.navigate([section, track.id]);
   }
@@ -142,7 +159,7 @@ export class TracksPageComponent implements OnInit, OnDestroy {
     if (!TracksPageComponent.allowedTypes.has(file.type)) {
       this.file = undefined;
       input.value = '';
-      this.uploadError.set('Format refusé. Choisissez un fichier MP3, WAV, OGG ou M4A.');
+      this.uploadError.set('Format refusé. Choisissez un audio MP3, WAV, OGG, M4A ou WebM, une vidéo MP4/WebM ou une image PNG/JPEG/WebP.');
       return;
     }
     if (file.size > TracksPageComponent.maxFileSize) {
@@ -162,6 +179,7 @@ export class TracksPageComponent implements OnInit, OnDestroy {
       next: (response) => {
         console.debug('[TracksPage] Pistes chargées', response.items.length);
         this.tracks.set(response.items);
+        for(const track of response.items)if(track.style)this.styles.set(track.id,track.style);
         this.pages.set(response.pages);
         this.loading.set(false);
       },
@@ -188,6 +206,17 @@ export class TracksPageComponent implements OnInit, OnDestroy {
     if (this.sortOptions.some((option) => option.value === value)) this.sortOrder.set(value);
   }
 
+  changeStyleFilter(event: Event): void {
+    this.styleFilter.set((event.target as HTMLSelectElement).value);
+  }
+
+  classify(track: Track, event: Event): void {
+    const style=(event.target as HTMLSelectElement).value;
+    this.community.updateTrack(track.id,{style}).subscribe({next:updated=>{this.styles.set(track.id,style);this.updatePublication(updated);},error:error=>{console.error('[Pistes] Style non sauvegardé',error);this.error.set('Impossible de sauvegarder le style dans votre compte.');}});
+  }
+
+  updatePublication(track:Track):void {this.tracks.update(items=>items.map(item=>item.id===track.id?track:item));}
+
   clearSearch(): void {
     this.searchQuery.set('');
   }
@@ -199,13 +228,15 @@ export class TracksPageComponent implements OnInit, OnDestroy {
     this.uploadProgress.set(0);
     this.uploadError.set('');
     this.uploadSuccess.set('');
-    this.service.upload(this.file, this.title.value || this.file.name).subscribe({
+    const style = this.uploadStyle.value;
+    this.service.upload(this.file, this.title.value || this.file.name, {style:this.uploadStyle.value}).subscribe({
       next: (event) => {
         if (event.type === HttpEventType.UploadProgress && event.total) {
           this.uploadProgress.set(Math.round(100 * event.loaded / event.total));
         }
         if (event.type === HttpEventType.Response) {
           console.debug('[TracksPage] Piste envoyée', event.body?.id);
+          if (event.body) this.styles.set(event.body.id, style);
           this.title.setValue('');
           this.file = undefined;
           const input = this.fileInput();
@@ -236,6 +267,7 @@ export class TracksPageComponent implements OnInit, OnDestroy {
         if (previousUrl) URL.revokeObjectURL(previousUrl);
         this.audioUrl.set(URL.createObjectURL(blob));
         this.playingTitle.set(track.title);
+        this.playingTrack.set(track);
         this.currentTime.set(0);
         this.duration.set(0);
         this.isPlaying.set(false);

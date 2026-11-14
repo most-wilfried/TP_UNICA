@@ -1,0 +1,8 @@
+<section class="account-mix" aria-label="Sauvegardes du mix dans le compte">
+  <div><h2>Retrouver mon mix</h2><p>Conserve les pistes sélectionnées, BPM, EQ, tonalité, Hot Cues, volumes et styles. Le micro et l’enregistrement ne sont jamais activés par une restauration.</p></div>
+  <label>Nom de la sauvegarde<input [formControl]="name" maxlength="120" /></label>
+  <div class="buttons"><button type="button" (click)="save()" [disabled]="busy() || !name.value.trim()">Sauvegarder dans mon compte</button><button type="button" (click)="list()" [disabled]="busy()">Charger mes sauvegardes</button></div>
+  @if (message()) { <p role="status">{{ message() }}</p> }
+  @if (error()) { <p role="alert">{{ error() }}</p> }
+  @for (project of saved(); track project.id) { <div class="saved"><span>{{ project.name }}</span><button type="button" (click)="load(project)" [disabled]="busy()">Restaurer</button></div> }
+</section>

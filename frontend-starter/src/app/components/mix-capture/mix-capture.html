@@ -1,0 +1,35 @@
+<section class="capture-panel" aria-label="Microphone et enregistrement du mix">
+  <div class="microphone">
+    <h3>Voix / micro</h3>
+    <p class="status" role="status">{{ capture.microphonePending() ? 'Autorisation du micro en attente…' : capture.microphoneActive() ? (capture.microphoneMuted() ? 'Micro connecté · muet' : 'Micro en direct dans le mix') : 'Micro désactivé' }}</p>
+    @if (capture.microphoneActive() || capture.microphonePending()) {
+      <button type="button" (click)="capture.disableMicrophone()">{{ capture.microphonePending() ? 'Annuler' : 'Désactiver le micro' }}</button>
+    } @else {
+      <button type="button" (click)="capture.enableMicrophone()">🎙 Activer le micro</button>
+    }
+    <label>Volume voix<input type="range" min="0" max="1" step="0.01" [value]="capture.microphoneVolume()" (input)="capture.setMicrophoneVolume(number($event))" /></label>
+    <button type="button" (click)="capture.muteMicrophone()" [disabled]="!capture.microphoneActive()" [attr.aria-pressed]="capture.microphoneMuted()">{{ capture.microphoneMuted() ? 'Réactiver la voix' : 'Couper la voix' }}</button>
+    <p class="hint">Utilisez un casque : la voix est diffusée en direct et ajoutée à l’enregistrement.</p>
+  </div>
+  <div class="recorder">
+    <h3>Enregistrer le mix</h3>
+    <p class="record-status" [class.live]="capture.recording()" role="status">{{ capture.recording() ? '● REC' : capture.recordPending() ? 'Préparation…' : 'Prêt' }} · {{ time(capture.seconds()) }}</p>
+    @if (capture.recording()) {
+      <button class="stop-record" type="button" (click)="capture.stopRecording()">■ Arrêter et sauvegarder</button>
+    } @else {
+      <button class="start-record" type="button" (click)="capture.startRecording()" [disabled]="capture.recordPending() || !capture.recordingSupported">● Enregistrer</button>
+    }
+    <p class="hint">Capture les platines A + B, l’égaliseur, le crossfader et la voix active. Cliquez sur « Arrêter et sauvegarder » pour obtenir votre fichier.</p>
+    @if (!capture.recordingSupported) { <p class="capture-error">Enregistrement indisponible dans ce navigateur.</p> }
+  </div>
+  @if (capture.error()) { <p class="capture-error" role="alert">{{ capture.error() }}</p> }
+  @if (capture.recordings().length) {
+    <div class="saved-mixes"><h3>Vos prises</h3><p class="hint">Téléchargez vos prises avant de quitter cette page.</p>
+      @for (mix of capture.recordings(); track mix.url) {
+        <div class="saved-mix"><a [href]="mix.url" [download]="mix.name">↓ Télécharger · {{ time(mix.seconds) }}</a><audio controls [src]="mix.url" preload="none" aria-label="Écouter le mix enregistré"></audio><label>Titre pour ma bibliothèque<input [formControl]="title" maxlength="200"/></label><button type="button" (click)="publish(mix)" [disabled]="saving()">{{saving()?'Enregistrement…':'Enregistrer dans ma bibliothèque'}}</button></div>
+      }
+    </div>
+  }
+</section>
+
+@if(publishError()){<p class="capture-error" role="alert">{{publishError()}}</p>}@if(uploaded();as track){<p role="status">Mix sauvegardé, privé par défaut. Choisissez sa visibilité :</p><app-publish-controls [track]="track" (updated)="uploaded.set($event)"/>}

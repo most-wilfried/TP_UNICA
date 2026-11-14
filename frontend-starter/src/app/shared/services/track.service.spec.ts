@@ -36,6 +36,13 @@ describe('TrackService', () => {
     request.flush(null);
   });
 
+  it('recherche dans toute la bibliothèque personnelle avant pagination', () => {
+    service.list(1,20,' House ').subscribe();
+    const request=http.expectOne(candidate=>candidate.url==='/api/tracks');
+    expect(request.request.params.get('q')).toBe('House');
+    request.flush({items:[],page:1,limit:20,total:0,pages:1});
+  });
+
   it('construit un multipart et demande les événements de progression', () => {
     const file = new File(['audio'], 'test.mp3', { type: 'audio/mpeg' });
     service.upload(file, 'Mon morceau').subscribe();
@@ -50,4 +57,21 @@ describe('TrackService', () => {
       size: 5, createdAt: '2026-01-01',
     });
   });
+  it('loads bundled demo audio from a local asset instead of the API', () => {
+    const blob = new Blob(['demo'], { type: 'audio/wav' });
+    let received: Blob | undefined;
+    service.audio('demo-house').subscribe(value => { received = value; });
+    const request = http.expectOne('/audio/demos/house.wav');
+    expect(request.request.responseType).toBe('blob');
+    request.flush(blob);
+    expect(received).toBe(blob);
+  });
+
+  it('preserves authenticated API loading for uploaded tracks', () => {
+    service.audio('track-42').subscribe();
+    const request = http.expectOne('/api/tracks/track-42/audio');
+    expect(request.request.responseType).toBe('blob');
+    request.flush(new Blob());
+  });
+
 });

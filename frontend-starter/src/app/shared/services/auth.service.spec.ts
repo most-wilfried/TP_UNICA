@@ -36,4 +36,20 @@ describe('AuthService', () => {
     expect(service.token()).toBe('jwt-test');
     expect(service.currentUser()?.name).toBe('Test');
   });
+
+  it('ignore un ancien profil reçu après une déconnexion',()=>{
+    service.token.set('ancienne-session');service.profile().subscribe();
+    const request=http.expectOne('/api/users/me');service.logout();
+    request.flush({id:'1',name:'Ancien compte',email:'ancien@example.test',createdAt:'2026-01-01'});
+    expect(service.currentUser()).toBeNull();expect(service.token()).toBeNull();
+  });
+
+  it('ne remplace pas le profil du nouveau compte par une ancienne réponse',()=>{
+    service.token.set('ancienne-session');service.profile().subscribe();
+    const oldProfile=http.expectOne('/api/users/me');
+    service.login('nouveau@example.test','motdepasse').subscribe();
+    http.expectOne('/api/auth/login').flush({token:'nouvelle-session',user:{id:'2',name:'Nouveau compte',email:'nouveau@example.test',createdAt:'2026-01-01'}});
+    oldProfile.flush({id:'1',name:'Ancien compte',email:'ancien@example.test',createdAt:'2026-01-01'});
+    expect(service.currentUser()?.id).toBe('2');expect(service.token()).toBe('nouvelle-session');
+  });
 });

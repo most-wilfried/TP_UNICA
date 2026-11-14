@@ -4,4 +4,5 @@ export interface User {
   name: string;
   email: string;
   createdAt: string;
+  bio?:string;avatarUrl?:string;discoverable?:boolean;notificationsEnabled?:boolean;role?:string;
 }

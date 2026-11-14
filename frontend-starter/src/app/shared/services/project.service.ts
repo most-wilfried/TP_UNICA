@@ -6,6 +6,8 @@ import { MixProject } from '../models/mix-project.model';
 export class ProjectService {
   private readonly http = inject(HttpClient);
   list() { return this.http.get<MixProject[]>('/api/projects'); }
-  create(name: string) { return this.http.post<MixProject>('/api/projects', { name }); }
+  create(name: string, effects?: unknown) { return this.http.post<MixProject>('/api/projects', effects ? { name, settings: { effects } } : { name }); }
+  share(id:string,userId:string){return this.http.post<MixProject>(`/api/projects/${id}/share`,{userId});}
+  revoke(id:string,userId:string){return this.http.delete<MixProject>(`/api/projects/${id}/share/${userId}`);}
   delete(id: string) { return this.http.delete<void>(`/api/projects/${id}`); }
 }
