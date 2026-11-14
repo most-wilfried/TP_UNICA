@@ -1397,3 +1397,22 @@ Le test couvre accès initial, suspension, refus du projet partagé et réactiva
 Fichiers : `backend/src/social/access.js`, `backend/test/social.test.js` et
 `API_CONTRACT.md`. Le binôme doit expliquer pourquoi un contrôle d'autorisation
 sur une relation doit être symétrique et revérifié à chaque lecture.
+
+## Contrôle de sécurité — dépendances (14 novembre 2026)
+
+L'audit des dépendances a signalé des avis de sécurité sur Mongoose, Multer,
+body-parser, qs, Vite et Zod. Les correctifs sont enregistrés dans les fichiers
+lock ; Angular CLI et Angular Build passent de 22.2.2 à 22.2.7 pour intégrer les
+versions corrigées de leurs dépendances, sans changement de version majeure.
+Versions retenues : Mongoose 9.12.1, Multer 2.5.0, body-parser 2.4.0, qs 6.17.1,
+Vite 8.3.5 et Zod 4.6.6. Aucun `npm audit fix --force` n'a été utilisé.
+
+Validation de cette session : 19 tests backend réussis après les corrections et
+les mises à jour ; 50 tests frontend réussis et build Angular réussi avec les
+nouveaux outils. Les deux audits npm complets (développement inclus) indiquent
+zéro vulnérabilité connue. Les deux avertissements CommonJS Butterchurn restent
+présents. Un audit npm sans avis connu ne prouve pas l'absence de toute
+faille : cette revue couvre les erreurs JSON, les relations de partage et les
+dépendances ; aucun audit exhaustif ni contrôle manuel navigateur n'est revendiqué.
+Le binôme doit distinguer dépendances d'exécution et outils de développement,
+et comprendre pourquoi les deux catégories nécessitent des mises à jour.
